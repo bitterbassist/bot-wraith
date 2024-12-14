@@ -6,6 +6,7 @@ from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
 import ast
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +22,10 @@ SPECIAL_USERS = ast.literal_eval(os.getenv("SPECIAL_USERS", "{}"))
 
 # Server-specific configurations
 server_configs = ast.literal_eval(os.getenv("SERVER_CONFIGS", "{}"))
+
+# Set up logging configuration
+logging.basicConfig(level=logging.DEBUG)  # Change to INFO or DEBUG as needed
+logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -43,10 +48,12 @@ async def monitor_tiktok(user, client, guild_config):
 
     live_status = False
 
-    client.logger.setLevel(LogLevel.INFO.value)
+    # Set TikTok Live Client logger to INFO or DEBUG for detailed logs
+    client.logger.setLevel(LogLevel.DEBUG.value)  # Use DEBUG to get more detailed logs
 
     while True:
         try:
+            print(f"Checking if {user['tiktok_username']} is live...")
             if not await client.is_live():
                 client.logger.info(f"{user['tiktok_username']} is not live. Checking again in 60 seconds.")
                 if role in member.roles:
