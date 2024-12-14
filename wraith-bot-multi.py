@@ -17,7 +17,11 @@ TOKEN = os.getenv("TOKEN")
 TIKTOK_USERS = ast.literal_eval(os.getenv("TIKTOK_USERS", "{}"))
 
 # Users with custom messages per server
-SPECIAL_USERS = ast.literal_eval(os.getenv("SPECIAL_USERS", "{}"))
+SPECIAL_USERS = {
+    "1145354259530010684": "@tiktokbarryallen: @everyone  🌟  tiktokbarryallen is now live! Get over there fast AF Boi! 🌟,@baddiedaddyp:  🌟 baddiedaddyp is live and you’re a big dill to me so get in here!  🌟,@sykk182: 🎉  sykk182 is live! Let's go show support! 🎉,@revenant_oc: 🌟  revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟",
+    "1307019842410516573": "@sykk182: @everyone 🎉 **Special Alert:** sykk182 is live! Let's go show our leader some love! 🎉,@revenant_oc: @everyone 🌟  **Special Alert:** General revenant_oc is now live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟,@odinz_den: @everyone 🌟   **VIP Streamer:** odinz_den Just your not so typical phasmo/horror streamer is now live! Get in here before I get Thor after you! 🌟",
+    "768792770734981141": "@baddiedaddyp: @everyone 🌟 baddiedaddyp is live and you’re a big dill to me so get in here!  🌟,@sykk182: 🎉  sykk182 is live! Let's go show support! 🎉,@revenant_oc: 🌟  revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟"
+}
 
 # Server-specific configurations
 server_configs = ast.literal_eval(os.getenv("SERVER_CONFIGS", "{}"))
