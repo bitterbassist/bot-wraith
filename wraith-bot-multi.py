@@ -5,7 +5,6 @@ from TikTokLive import TikTokLiveClient
 from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
-import ast
 
 # Load environment variables
 load_dotenv()
@@ -14,17 +13,19 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
 # Server-specific TikTok users
-TIKTOK_USERS = ast.literal_eval(os.getenv("TIKTOK_USERS", "{}"))
+TIKTOK_USERS_1307019842410516573 = os.getenv("TIKTOK_USERS_1307019842410516573")
+TIKTOK_USERS_768792770734981141 = os.getenv("TIKTOK_USERS_768792770734981141")
+TIKTOK_USERS_1145354259530010684 = os.getenv("TIKTOK_USERS_1145354259530010684")
 
 # Users with custom messages per server
-SPECIAL_USERS = {
-    "1145354259530010684": "@tiktokbarryallen: @everyone  🌟  tiktokbarryallen is now live! Get over there fast AF Boi! 🌟,@baddiedaddyp:  🌟 baddiedaddyp is live and you’re a big dill to me so get in here!  🌟,@sykk182: 🎉  sykk182 is live! Let's go show support! 🎉,@revenant_oc: 🌟  revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟",
-    "1307019842410516573": "@sykk182: @everyone 🎉 **Special Alert:** sykk182 is live! Let's go show our leader some love! 🎉,@revenant_oc: @everyone 🌟  **Special Alert:** General revenant_oc is now live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟,@odinz_den: @everyone 🌟   **VIP Streamer:** odinz_den Just your not so typical phasmo/horror streamer is now live! Get in here before I get Thor after you! 🌟",
-    "768792770734981141": "@baddiedaddyp: @everyone 🌟 baddiedaddyp is live and you’re a big dill to me so get in here!  🌟,@sykk182: 🎉  sykk182 is live! Let's go show support! 🎉,@revenant_oc: 🌟  revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... 🌟"
-}
+SPECIAL_USERS_1307019842410516573 = os.getenv("SPECIAL_USERS_1307019842410516573")
+SPECIAL_USERS_768792770734981141 = os.getenv("SPECIAL_USERS_768792770734981141")
+SPECIAL_USERS_1145354259530010684 = os.getenv("SPECIAL_USERS_1145354259530010684")
 
 # Server-specific configurations
-server_configs = ast.literal_eval(os.getenv("SERVER_CONFIGS", "{}"))
+SERVER_CONFIGS_1307019842410516573 = os.getenv("SERVER_CONFIGS_1307019842410516573")
+SERVER_CONFIGS_768792770734981141 = os.getenv("SERVER_CONFIGS_768792770734981141")
+SERVER_CONFIGS_1145354259530010684 = os.getenv("SERVER_CONFIGS_1145354259530010684")
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -49,17 +50,21 @@ def setup_logger(logger):
     logger.setLevel(logging.INFO)
 
 async def monitor_tiktok(user, client, guild_config):
-    guild_id = guild_config.get("guild_id")
-    announce_channel_id = guild_config.get("announce_channel_id")
-    owner_stream_channel_id = guild_config.get("owner_stream_channel_id")
-    owner_tiktok_username = guild_config.get("owner_tiktok_username")
-    role_name = guild_config.get("role_name")
+    guild_id = int(guild_config.get("guild_id", 0))  # Handle missing guild_id
+    announce_channel_id = guild_config.get("announce_channel_id", 0)
+    owner_stream_channel_id = guild_config.get("owner_stream_channel_id", 0)
+    owner_tiktok_username = guild_config.get("owner_tiktok_username", "")
+    role_name = guild_config.get("role_name", "")
 
-    guild = discord.utils.get(bot.guilds, id=guild_id)
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        client.logger.error(f"Guild with ID {guild_id} not found.")
+        return
+
     role = discord.utils.get(guild.roles, name=role_name)
-    member = discord.utils.get(guild.members, name=user["discord_username"])
-    announce_channel = discord.utils.get(guild.text_channels, id=announce_channel_id)
-    owner_channel = discord.utils.get(guild.text_channels, id=owner_stream_channel_id)
+    member = guild.get_member_named(user["discord_username"])
+    announce_channel = guild.get_channel(announce_channel_id)
+    owner_channel = guild.get_channel(owner_stream_channel_id)
 
     live_status = False
 
@@ -70,19 +75,19 @@ async def monitor_tiktok(user, client, guild_config):
         try:
             if not await client.is_live():
                 client.logger.info(f"{user['tiktok_username']} is not live. Checking again in 60 seconds.")
-                if role in member.roles:
+                if role and role in member.roles:
                     await member.remove_roles(role)
                     client.logger.info(f"Removed {role_name} role from {member.name}")
                 live_status = False
                 await asyncio.sleep(60)
             else:
                 client.logger.info(f"{user['tiktok_username']} is live!")
-                if role not in member.roles:
+                if role and role not in member.roles:
                     await member.add_roles(role)
                     client.logger.info(f"Added {role_name} role to {member.name}")
                 if not live_status:
                     tiktok_url = f"https://www.tiktok.com/@{user['tiktok_username'].lstrip('@')}/live"
-                    server_messages = SPECIAL_USERS.get(str(guild_id), {})
+                    server_messages = SPECIAL_USERS_1307019842410516573.split(",") if SPECIAL_USERS_1307019842410516573 else []
                     message = server_messages.get(
                         user["tiktok_username"],
                         f"\U0001F6D2 {user['tiktok_username']} is now live on TikTok! \n\U0001F534 **Watch live here:** {tiktok_url}"
@@ -94,8 +99,9 @@ async def monitor_tiktok(user, client, guild_config):
                     except Exception as e:
                         client.logger.warning(f"Could not fetch metadata for {user['tiktok_username']}: {e}")
 
-                    await announce_channel.send(message)
-                    client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name}")
+                    if announce_channel:
+                        await announce_channel.send(message)
+                        client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name}")
 
                     if user["tiktok_username"] == owner_tiktok_username and owner_channel:
                         await owner_channel.send(f"\U0001F534 {user['tiktok_username']} is now live on TikTok! \n\U0001F517 Watch live: {tiktok_url}")
