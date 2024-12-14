@@ -5,7 +5,6 @@ from TikTokLive import TikTokLiveClient
 from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
-import json
 
 # Load environment variables
 load_dotenv()
@@ -14,13 +13,13 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
 # Server-specific TikTok users
-TIKTOK_USERS = json.loads(os.getenv("TIKTOK_USERS"))
+TIKTOK_USERS = eval(os.getenv("TIKTOK_USERS"))
 
 # Users with custom messages per server
-SPECIAL_USERS = json.loads(os.getenv("SPECIAL_USERS"))
+SPECIAL_USERS = eval(os.getenv("SPECIAL_USERS"))
 
 # Server-specific configurations
-server_configs = json.loads(os.getenv("SERVER_CONFIGS"))
+server_configs = eval(os.getenv("SERVER_CONFIGS"))
 
 intents = discord.Intents.default()
 intents.guilds = True
