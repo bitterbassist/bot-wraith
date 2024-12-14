@@ -1,9 +1,9 @@
-如何在 Python 中使用既有的 C library?
-　在資訊科技快速發展的今天, 開發及測試軟體的速度是不容忽視的
-課題. 為加快開發及測試的速度, 我們便常希望能利用一些已開發好的
-library, 並有一個 fast prototyping 的 programming language 可
-供使用. 目前有許許多多的 library 是以 C 寫成, 而 Python 是一個
-fast prototyping 的 programming language. 故我們希望能將既有的
-C library 拿到 Python 的環境中測試及整合. 其中最主要也是我們所
-要討論的問題就是:
-
+嚙緘嚙踝蕭b Python 嚙踝蕭嚙誕用既嚙踝蕭嚙踝蕭 C library?
+嚙瑾嚙箭嚙踝蕭T嚙踝蕭犑硈t嚙緻嚙箠嚙踝蕭嚙踝蕭嚙踝蕭, 嚙罷嚙緻嚙諄湛蕭嚙調軟嚙賡的嚙緣嚙論是嚙踝蕭嚙箴嚙踝蕭嚙踝蕭嚙踝蕭
+嚙踝蕭嚙瘩. 嚙踝蕭嚙稼嚙誰開嚙緻嚙諄湛蕭嚙調迎蕭嚙緣嚙踝蕭, 嚙誹們便嚙窯嚙複梧蕭嚙瞋嚙諄一嚙褒已嚙罷嚙緻嚙緯嚙踝蕭
+library, 嚙衛佗蕭嚙瑾嚙踝蕭 fast prototyping 嚙踝蕭 programming language 嚙箠
+嚙諸使伐蕭. 嚙諍前嚙踝蕭嚙穀嚙穀嚙篁嚙篁嚙踝蕭 library 嚙瞌嚙瘡 C 嚙篇嚙踝蕭, 嚙踝蕭 Python 嚙瞌嚙瑾嚙踝蕭
+fast prototyping 嚙踝蕭 programming language. 嚙瘦嚙誹們希梧蕭嚙瞇嚙皚嚙踝蕭嚙踝蕭
+C library 嚙踝蕭嚙踝蕭 Python 嚙踝蕭嚙踝蕭嚙課歹蕭嚙踝蕭嚙調及橘蕭X. 嚙賭中嚙諒主嚙緯嚙稽嚙瞌嚙誹們抬蕭
+嚙緯嚙瞋嚙論迎蕭嚙踝蕭嚙瘩嚙瞇嚙瞌:
+
