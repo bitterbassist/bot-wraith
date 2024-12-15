@@ -84,8 +84,18 @@ async def monitor_tiktok(user, client, guild_config):
         client.logger.error(f"Guild with ID {guild_id} not found.")
         return
 
+    # Check if the discord_username is valid before attempting to fetch the member
+    discord_username = user.get("discord_username")
+    if not discord_username:
+        client.logger.error(f"Discord username for {user['tiktok_username']} is missing.")
+        return  # Exit if no discord_username is provided
+
     role = discord.utils.get(guild.roles, name=role_name)
-    member = guild.get_member_named(user["discord_username"])
+    member = guild.get_member_named(discord_username)
+    if not member:
+        client.logger.error(f"Discord member with username {discord_username} not found.")
+        return
+
     announce_channel = guild.get_channel(announce_channel_id)
     owner_channel = guild.get_channel(owner_stream_channel_id)
 
@@ -137,6 +147,7 @@ async def monitor_tiktok(user, client, guild_config):
             client.logger.error(f"Error monitoring {user['tiktok_username']}: {e}")
             await asyncio.sleep(60)
 
+
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
@@ -145,10 +156,6 @@ async def on_ready():
     for server_id, guild_config in SERVER_CONFIGS.items():
         # Make sure 'server_id' is an integer before proceeding
         try:
-            # Validate that server_id is a valid integer before using it
-            if server_id is None or not server_id.isdigit():
-                print(f"Warning: Invalid or missing server_id {server_id}. Skipping this entry.")
-                continue
             int_server_id = int(server_id)
         except ValueError:
             print(f"Warning: Invalid server_id {server_id}. Skipping this entry.")
