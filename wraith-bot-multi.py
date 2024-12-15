@@ -27,21 +27,33 @@ SERVER_CONFIGS = {}
 for key, value in os.environ.items():
     if key.startswith("SERVER_CONFIG_"):
         parts = key.split("_")
-        server_id = parts[1]
+        server_id = parts[1]  # Get the server ID
         config_key = "_".join(parts[2:])
         if server_id not in SERVER_CONFIGS:
             SERVER_CONFIGS[server_id] = {}
         SERVER_CONFIGS[server_id][config_key] = value
 
-# Add guild_id from environment variables
+# Debugging: Print out the SERVER_CONFIGS to ensure we have valid data
+print("Parsed SERVER_CONFIGS:", SERVER_CONFIGS)
+
+# Add guild_id from environment variables (parse only valid integer guild IDs)
 for guild_id_key in os.environ:
     if guild_id_key.startswith("GUILD_ID_"):
         guild_id = os.getenv(guild_id_key)
         if guild_id:
-            # Add the guild_id to the server config
-            server_id = guild_id_key.split("_")[1]
-            if server_id in SERVER_CONFIGS:
-                SERVER_CONFIGS[server_id]["guild_id"] = guild_id
+            try:
+                # Try to convert guild_id to an integer
+                int_guild_id = int(guild_id)
+                # Find the server ID (based on the naming convention of GUILD_ID_*)
+                server_id = guild_id_key.split("_")[1]
+                if server_id in SERVER_CONFIGS:
+                    SERVER_CONFIGS[server_id]["guild_id"] = int_guild_id
+            except ValueError:
+                # If conversion fails, print a warning
+                print(f"Warning: Invalid guild_id found for {guild_id_key}: {guild_id}")
+
+# Debugging: Print SERVER_CONFIGS after updating with guild_id
+print("Updated SERVER_CONFIGS with guild_id:", SERVER_CONFIGS)
 
 # Discord bot intents
 intents = discord.Intents.default()
