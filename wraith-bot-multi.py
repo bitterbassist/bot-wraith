@@ -42,10 +42,10 @@ SERVER_CONFIGS = {
     }
 }
 
-# Discord bot intents
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
+intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -152,6 +152,7 @@ async def monitor_tiktok(user, client, server_config, environment):
             client.logger.error(f"Error monitoring {user['tiktok_username']} in {environment}: {e}")
             await asyncio.sleep(60)
 
+# Updated on_ready function to exclude error logging for the test server
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
@@ -161,6 +162,10 @@ async def on_ready():
         try:
             guild_id = server_config.get('guild_id')
             if not guild_id:
+                # Skip test server warnings
+                if environment == "test":
+                    continue
+
                 print(f"Warning: guild_id is missing or invalid for {environment} environment. Skipping.")
                 continue
 
@@ -174,8 +179,6 @@ async def on_ready():
                     test_channel = test_guild.get_channel(int(monitoring_started_channel_id))
                     if test_channel:
                         await test_channel.send("\U0001F514 Monitoring of TikTok streams has started! \U0001F514")
-                    else:
-                        print(f"Test channel {monitoring_started_channel_id} not found.")
 
             # Proceed with the monitoring for TikTok users
             for user in TIKTOK_USERS:
@@ -188,6 +191,9 @@ async def on_ready():
                 asyncio.create_task(monitor_tiktok(user_info, client, server_config, environment))
 
         except ValueError as e:
+            # Skip test server warnings
+            if environment == "test":
+                continue
             print(f"Error: Invalid server ID for {server_config['guild_id']}. {e}")
             continue  # Skip invalid server IDs
 
