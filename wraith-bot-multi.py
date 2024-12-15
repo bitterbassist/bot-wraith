@@ -154,20 +154,19 @@ async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
     # Iterate through the server configurations
-    for environment, server_config in SERVER_CONFIGS.items():
-        try:
-            # Check if guild_id exists, and if not, skip the entry
-            guild_id = server_config.get('guild_id')
-            if not guild_id:
-                print(f"Warning: guild_id is missing or invalid for server {environment}. Skipping this entry.")
-                continue  # Skip this environment if no guild_id is found
+for environment, server_config in SERVER_CONFIGS.items():
+    try:
+        guild_id = server_config.get('guild_id')
+        if not guild_id:
+            print(f"Warning: guild_id is missing or invalid for server {environment}. Skipping this entry.")
+            continue
 
-            # Convert the guild_id to an integer
-            int_server_id = int(guild_id)
+        int_server_id = int(guild_id)  # Convert guild_id to integer
 
-        except ValueError:
-            print(f"Warning: Invalid server_id {guild_id}. Skipping this entry.")
-            continue  # Skip invalid server IDs
+    except ValueError as e:  # Catch errors related to invalid conversion
+        print(f"Warning: Invalid server_id {guild_id} for server {environment}. Skipping this entry.")
+        continue
+  # Skip invalid server IDs
 
         # Send a message to the test server indicating the monitoring has started
         if environment == "test":
