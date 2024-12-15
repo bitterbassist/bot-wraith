@@ -6,7 +6,7 @@ from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
 import time
-import json
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -17,35 +17,21 @@ TOKEN = os.getenv("TOKEN")
 # List of TikTok usernames
 TIKTOK_USERS = os.getenv("TIKTOK_USERS", "").split(',')
 
-# Special users: Parse from the environment variables or an external JSON file
+# Special users: Parse from the environment variables
 SPECIAL_USERS = {}
 for key, value in os.environ.items():
     if key.startswith("SPECIAL_USERS_"):
         username = key.split("_", 2)[2]
         SPECIAL_USERS[username] = dict([msg.split(": ") for msg in value.split(",")])
 
-# Update your server configs to handle multiple production servers and test server
+# Fetch the server configurations for both production and test
 SERVER_CONFIGS = {
-    "production_1": {
-        "guild_id": os.getenv("SERVER_CONFIG_1307019842410516573_GUILD_ID"),
-        "announce_channel_id": os.getenv("SERVER_CONFIG_1307019842410516573_ANNOUNCE_CHANNEL_ID"),
-        "role_name": os.getenv("SERVER_CONFIG_1307019842410516573_ROLE_NAME"),
-        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_1307019842410516573_OWNER_STREAM_CHANNEL_ID"),
-        "owner_tiktok_username": os.getenv("SERVER_CONFIG_1307019842410516573_OWNER_TIKTOK_USERNAME")
-    },
-    "production_2": {
-        "guild_id": os.getenv("SERVER_CONFIG_768792770734981141_GUILD_ID"),
-        "announce_channel_id": os.getenv("SERVER_CONFIG_768792770734981141_ANNOUNCE_CHANNEL_ID"),
-        "role_name": os.getenv("SERVER_CONFIG_768792770734981141_ROLE_NAME"),
-        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_768792770734981141_OWNER_STREAM_CHANNEL_ID"),
-        "owner_tiktok_username": os.getenv("SERVER_CONFIG_768792770734981141_OWNER_TIKTOK_USERNAME")
-    },
-    "production_3": {
-        "guild_id": os.getenv("SERVER_CONFIG_1145354259530010684_GUILD_ID"),
-        "announce_channel_id": os.getenv("SERVER_CONFIG_1145354259530010684_ANNOUNCE_CHANNEL_ID"),
-        "role_name": os.getenv("SERVER_CONFIG_1145354259530010684_ROLE_NAME"),
-        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_1145354259530010684_OWNER_STREAM_CHANNEL_ID"),
-        "owner_tiktok_username": os.getenv("SERVER_CONFIG_1145354259530010684_OWNER_TIKTOK_USERNAME")
+    "production": {
+        "guild_id": os.getenv("PRODUCTION_SERVER_GUILD_ID"),
+        "announce_channel_id": os.getenv("PRODUCTION_SERVER_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("PRODUCTION_SERVER_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_OWNER_TIKTOK_USERNAME")
     },
     "test": {
         "guild_id": os.getenv("TEST_SERVER_GUILD_ID"),
@@ -53,23 +39,19 @@ SERVER_CONFIGS = {
         "role_name": os.getenv("TEST_SERVER_ROLE_NAME"),
         "owner_stream_channel_id": os.getenv("TEST_SERVER_OWNER_STREAM_CHANNEL_ID"),
         "owner_tiktok_username": os.getenv("TEST_SERVER_OWNER_TIKTOK_USERNAME"),
-        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
+        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")  # Add this for the monitoring notification channel
     }
 }
 
 # Discord bot intents
 intents = discord.Intents.default()
-intents.guilds = True  # Allows bot to track guilds
-intents.members = True  # Allows bot to track members (useful for role management)
-intents.messages = True  # Allows bot to read messages (Message Content Intent)
-intents.message_content = True  # Ensures the bot can access the content of messages
+intents.guilds = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Setup logger with custom formatting
 def setup_logger(logger):
-    import logging
-
     class RailwayFormatter(logging.Formatter):
         def format(self, record):
             level_tag = f"@level:{record.levelname.lower()}"
@@ -119,7 +101,7 @@ async def monitor_tiktok(user, client, server_config):
         try:
             # Check if we have a cached live status
             live_status = live_status_cache.get(user['tiktok_username'], None)
-            
+
             if live_status is None:
                 # Fetch live status from TikTok if not cached
                 live_status = await client.is_live()
@@ -169,75 +151,41 @@ async def monitor_tiktok(user, client, server_config):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-    environment = os.getenv("ENVIRONMENT", "test")  # Get environment type (production or test)
-    if environment == "production":
-        # Loop through all production servers
-        for key, server_config in SERVER_CONFIGS.items():
-            if key.startswith("production"):
-                try:
-                    guild_id = server_config.get("guild_id")
-                    if not guild_id:
-                        print(f"Warning: guild_id is missing or invalid for server {key}. Skipping this entry.")
-                        continue
-                    
-                    # Attempt to get the guild and check if it's valid
-                    int_server_id = int(guild_id)  # Convert to integer
-                    guild = bot.get_guild(int_server_id)
-                    if not guild:
-                        print(f"Warning: Guild with ID {guild_id} not found for server {key}. Skipping.")
-                        continue
-
-                    # Proceed with monitoring for TikTok users
-                    for user in TIKTOK_USERS:
-                        user_info = {
-                            "tiktok_username": user,
-                            "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Get Discord username from env
-                        }
-                        client = TikTokLiveClient(unique_id=user)
-                        setup_logger(client.logger)
-                        asyncio.create_task(monitor_tiktok(user_info, client, server_config))
-                        
-                except ValueError as e:
-                    print(f"Warning: Invalid server_id {guild_id} for server {key}. Skipping this entry.")
-                    continue
-    else:
-        # Handle Test Server Configuration
-        server_config = SERVER_CONFIGS.get("test")
+    # Iterate through the server configurations
+    for environment, server_config in SERVER_CONFIGS.items():
         try:
-            guild_id = server_config.get("guild_id")
+            guild_id = server_config.get('guild_id')
             if not guild_id:
-                print(f"Warning: guild_id is missing or invalid for test server. Skipping this entry.")
-                return
+                print(f"Warning: guild_id is missing or invalid for server {environment}. Skipping this entry.")
+                continue
 
-            int_server_id = int(guild_id)
-            guild = bot.get_guild(int_server_id)
-            if not guild:
-                print(f"Warning: Guild with ID {guild_id} not found for test server. Skipping.")
-                return
+            int_server_id = int(guild_id)  # Convert guild_id to integer
 
             # Send a message to the test server indicating the monitoring has started
-            monitoring_started_channel_id = server_config.get("monitoring_started_channel_id")
-            if monitoring_started_channel_id:
-                test_channel = guild.get_channel(int(monitoring_started_channel_id))
-                if test_channel:
-                    await test_channel.send("🔔 Monitoring of TikTok streams has started! 🔔")
-                else:
-                    print(f"Test channel {monitoring_started_channel_id} not found.")
-            
-            # Proceed with TikTok user monitoring for the test server
+            if environment == "test":
+                monitoring_started_channel_id = server_config.get("monitoring_started_channel_id")
+                if monitoring_started_channel_id:
+                    test_guild = bot.get_guild(int_server_id)
+                    test_channel = test_guild.get_channel(int(monitoring_started_channel_id))
+                    if test_channel:
+                        await test_channel.send("🔔 Monitoring of TikTok streams has started! 🔔")
+                    else:
+                        print(f"Test channel {monitoring_started_channel_id} not found.")
+                    continue  # Skip this server configuration if guild_id is missing
+
+            # Proceed with the monitoring for TikTok users
             for user in TIKTOK_USERS:
                 user_info = {
                     "tiktok_username": user,
-                    "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")
+                    "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Still using this for reference
                 }
                 client = TikTokLiveClient(unique_id=user)
                 setup_logger(client.logger)
                 asyncio.create_task(monitor_tiktok(user_info, client, server_config))
 
         except ValueError as e:
-            print(f"Error: Invalid server ID for test server. {e}")
-            return  # Skip invalid server IDs
-
+            print(f"Error: Invalid server ID for {server_config['guild_id']}. {e}")
+            continue  # Skip invalid server IDs
 
 @bot.command()
 async def ping(ctx):
@@ -276,7 +224,6 @@ async def status(ctx):
 @bot.event
 async def on_command_error(ctx, error):
     print(f"Error occurred: {error}")
-
 
 if __name__ == "__main__":
     bot.run(TOKEN)
