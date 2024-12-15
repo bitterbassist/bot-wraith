@@ -79,17 +79,23 @@ async def monitor_tiktok(user, client, server_config, environment):
         client.logger.error(f"Guild with ID {guild_id} not found in {environment} environment.")
         return
 
-    # Get the discord_user_id from environment variables
-    discord_user_id = os.getenv(f"{user['tiktok_username']}_DISCORD_USER_ID")
-    if not discord_user_id:
-        client.logger.error(f"Discord user ID for {user['tiktok_username']} is missing in {environment}.")
+    # Get the discord_username from environment variables
+    discord_username = os.getenv(f"{user['tiktok_username']}_DISCORD_USERNAME")
+    if not discord_username:
+        client.logger.error(f"Discord username for {user['tiktok_username']} is missing in {environment}.")
         return
 
-    member = guild.get_member(int(discord_user_id))  # Use the ID to fetch the member
-    if not member:
-        client.logger.error(f"Discord member with ID {discord_user_id} not found in {environment}.")
+    # Search for members by username (ignoring discriminator)
+    matching_members = [
+        member for member in guild.members if member.name.lower() == discord_username.lower()
+    ]
+    if not matching_members:
+        client.logger.error(f"No members with username '{discord_username}' found in {environment}.")
         return
+    elif len(matching_members) > 1:
+        client.logger.warning(f"Multiple members with username '{discord_username}' found. Using the first match.")
 
+    member = matching_members[0]
     announce_channel = guild.get_channel(int(announce_channel_id))
     owner_channel = guild.get_channel(int(owner_stream_channel_id))
 
