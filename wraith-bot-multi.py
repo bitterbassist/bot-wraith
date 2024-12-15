@@ -26,12 +26,26 @@ for key, value in os.environ.items():
 
 # Fetch the server configurations for both production and test
 SERVER_CONFIGS = {
-    "production": {
-        "guild_id": os.getenv("PRODUCTION_SERVER_GUILD_ID"),
-        "announce_channel_id": os.getenv("PRODUCTION_SERVER_ANNOUNCE_CHANNEL_ID"),
-        "role_name": os.getenv("PRODUCTION_SERVER_ROLE_NAME"),
-        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_OWNER_STREAM_CHANNEL_ID"),
-        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_OWNER_TIKTOK_USERNAME")
+    "production_1": {
+        "guild_id": os.getenv("PRODUCTION_SERVER_1_GUILD_ID"),
+        "announce_channel_id": os.getenv("PRODUCTION_SERVER_1_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("PRODUCTION_SERVER_1_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_1_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_1_OWNER_TIKTOK_USERNAME")
+    },
+    "production_2": {
+        "guild_id": os.getenv("PRODUCTION_SERVER_2_GUILD_ID"),
+        "announce_channel_id": os.getenv("PRODUCTION_SERVER_2_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("PRODUCTION_SERVER_2_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_2_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_2_OWNER_TIKTOK_USERNAME")
+    },
+    "production_3": {
+        "guild_id": os.getenv("PRODUCTION_SERVER_3_GUILD_ID"),
+        "announce_channel_id": os.getenv("PRODUCTION_SERVER_3_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("PRODUCTION_SERVER_3_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_3_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_3_OWNER_TIKTOK_USERNAME")
     },
     "test": {
         "guild_id": os.getenv("TEST_SERVER_GUILD_ID"),
@@ -193,9 +207,8 @@ async def on_ready():
                 ))
 
         except ValueError as e:
-            print(f"Error: Invalid server ID for {server_config['guild_id']}. {e}")
+            print(f"Error: Invalid server ID for {guild_id}. {e}")
             continue  # Skip invalid server IDs
-
 
 @bot.command()
 async def ping(ctx):
