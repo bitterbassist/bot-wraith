@@ -5,7 +5,6 @@ from TikTokLive import TikTokLiveClient
 from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
-import json  # Added import for json
 
 # Load environment variables
 load_dotenv()
@@ -13,15 +12,28 @@ load_dotenv()
 # Bot token
 TOKEN = os.getenv("TOKEN")
 
-# Parse TIKTOK_USERS from environment variable and convert it back to a dictionary
-TIKTOK_USERS = json.loads(os.getenv("TIKTOK_USERS", "{}"))
+# List of TikTok usernames
+TIKTOK_USERS = os.getenv("TIKTOK_USERS", "").split(',')
 
-# Parse SPECIAL_USERS from environment variable and convert it back to a dictionary
-SPECIAL_USERS = json.loads(os.getenv("SPECIAL_USERS", "{}"))
+# Special users: Parse from the environment variables
+SPECIAL_USERS = {}
+for key, value in os.environ.items():
+    if key.startswith("SPECIAL_USERS_"):
+        username = key.split("_", 2)[2]
+        SPECIAL_USERS[username] = dict([msg.split(": ") for msg in value.split(",")])
 
-# Parse SERVER_CONFIGS from environment variable and convert it back to a dictionary
-SERVER_CONFIGS = json.loads(os.getenv("SERVER_CONFIGS", "{}"))
+# Server-specific configurations
+SERVER_CONFIGS = {}
+for key, value in os.environ.items():
+    if key.startswith("SERVER_CONFIG_"):
+        parts = key.split("_")
+        server_id = parts[1]
+        config_key = "_".join(parts[2:])
+        if server_id not in SERVER_CONFIGS:
+            SERVER_CONFIGS[server_id] = {}
+        SERVER_CONFIGS[server_id][config_key] = value
 
+# Discord bot intents
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
@@ -112,8 +124,7 @@ async def monitor_tiktok(user, client, guild_config):
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
-    for guild_id in SERVER_CONFIGS:
-        guild_config = SERVER_CONFIGS[guild_id]
+    for guild_id, guild_config in SERVER_CONFIGS.items():
         for user in TIKTOK_USERS:
             user_info = {
                 "tiktok_username": user,
