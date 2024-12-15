@@ -33,6 +33,16 @@ for key, value in os.environ.items():
             SERVER_CONFIGS[server_id] = {}
         SERVER_CONFIGS[server_id][config_key] = value
 
+# Add guild_id from environment variables
+for guild_id_key in os.environ:
+    if guild_id_key.startswith("GUILD_ID_"):
+        guild_id = os.getenv(guild_id_key)
+        if guild_id:
+            # Add the guild_id to the server config
+            server_id = guild_id_key.split("_")[1]
+            if server_id in SERVER_CONFIGS:
+                SERVER_CONFIGS[server_id]["guild_id"] = guild_id
+
 # Discord bot intents
 intents = discord.Intents.default()
 intents.guilds = True
@@ -57,20 +67,11 @@ def setup_logger(logger):
     logger.setLevel(logging.INFO)
 
 async def monitor_tiktok(user, client, guild_config):
-    # Ensure guild_id is an integer and handle missing or invalid values
-    try:
-        guild_id = int(guild_config.get("guild_id", 0))  # Handle missing or invalid guild_id
-    except ValueError:
-        client.logger.error(f"Invalid guild_id value: {guild_config.get('guild_id')}. Setting it to 0.")
-        guild_id = 0
-
+    guild_id = int(guild_config.get("guild_id", 0))  # Ensure guild_id is passed correctly
     announce_channel_id = guild_config.get("announce_channel_id", 0)
     owner_stream_channel_id = guild_config.get("owner_stream_channel_id", 0)
     owner_tiktok_username = guild_config.get("owner_tiktok_username", "")
     role_name = guild_config.get("role_name", "")
-
-    # Debugging: Print the guild_id to see if it's being passed correctly
-    print(f"Processing guild_id: {guild_id}")
 
     guild = bot.get_guild(guild_id)
     if not guild:
@@ -134,7 +135,6 @@ async def monitor_tiktok(user, client, guild_config):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
     for guild_id, guild_config in SERVER_CONFIGS.items():
-        print(f"Processing guild: {guild_id}")  # Debugging line to see the guild_id
         for user in TIKTOK_USERS:
             user_info = {
                 "tiktok_username": user,
