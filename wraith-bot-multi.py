@@ -5,7 +5,6 @@ from TikTokLive import TikTokLiveClient
 from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
-import time
 import logging
 
 # Load environment variables
@@ -39,7 +38,7 @@ SERVER_CONFIGS = {
         "role_name": os.getenv("TEST_SERVER_ROLE_NAME"),
         "owner_stream_channel_id": os.getenv("TEST_SERVER_OWNER_STREAM_CHANNEL_ID"),
         "owner_tiktok_username": os.getenv("TEST_SERVER_OWNER_TIKTOK_USERNAME"),
-        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")  # Add this for the monitoring notification channel
+        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
     }
 }
 
@@ -68,7 +67,7 @@ def setup_logger(logger):
 # Cache for live status to reduce frequent checks
 live_status_cache = {}
 
-async def monitor_tiktok(user, client, server_config):
+async def monitor_tiktok(user, client, server_config, environment):
     guild_id = int(server_config.get("guild_id", 0))  # Handle missing guild_id
     announce_channel_id = server_config.get("announce_channel_id", 0)
     owner_stream_channel_id = server_config.get("owner_stream_channel_id", 0)
@@ -77,25 +76,25 @@ async def monitor_tiktok(user, client, server_config):
 
     guild = bot.get_guild(guild_id)
     if not guild:
-        client.logger.error(f"Guild with ID {guild_id} not found.")
+        client.logger.error(f"Guild with ID {guild_id} not found in {environment} environment.")
         return
 
     # Get the discord_user_id from environment variables
     discord_user_id = os.getenv(f"{user['tiktok_username']}_DISCORD_USER_ID")
     if not discord_user_id:
-        client.logger.error(f"Discord user ID for {user['tiktok_username']} is missing.")
+        client.logger.error(f"Discord user ID for {user['tiktok_username']} is missing in {environment}.")
         return
 
     member = guild.get_member(int(discord_user_id))  # Use the ID to fetch the member
     if not member:
-        client.logger.error(f"Discord member with ID {discord_user_id} not found.")
+        client.logger.error(f"Discord member with ID {discord_user_id} not found in {environment}.")
         return
 
-    announce_channel = guild.get_channel(announce_channel_id)
-    owner_channel = guild.get_channel(owner_stream_channel_id)
+    announce_channel = guild.get_channel(int(announce_channel_id))
+    owner_channel = guild.get_channel(int(owner_stream_channel_id))
 
     setup_logger(client.logger)
-    client.logger.info(f"Starting TikTok monitoring for {user['tiktok_username']}")
+    client.logger.info(f"Starting TikTok monitoring for {user['tiktok_username']} in {environment}.")
 
     while True:
         try:
@@ -108,21 +107,21 @@ async def monitor_tiktok(user, client, server_config):
                 live_status_cache[user['tiktok_username']] = live_status
 
             if not live_status:
-                client.logger.info(f"{user['tiktok_username']} is not live. Checking again in 60 seconds.")
+                client.logger.info(f"{user['tiktok_username']} is not live in {environment}. Checking again in 60 seconds.")
                 if role_name and role_name in [role.name for role in member.roles]:
                     role = discord.utils.get(guild.roles, name=role_name)
                     await member.remove_roles(role)
-                    client.logger.info(f"Removed {role_name} role from {member.name}")
+                    client.logger.info(f"Removed {role_name} role from {member.name} in {environment}.")
                 await asyncio.sleep(60)
                 continue
 
             # If the user is live and the status has changed, send messages and update roles
             if live_status:
-                client.logger.info(f"{user['tiktok_username']} is live!")
+                client.logger.info(f"{user['tiktok_username']} is live in {environment}!")
                 if role_name and role_name not in [role.name for role in member.roles]:
                     role = discord.utils.get(guild.roles, name=role_name)
                     await member.add_roles(role)
-                    client.logger.info(f"Added {role_name} role to {member.name}")
+                    client.logger.info(f"Added {role_name} role to {member.name} in {environment}.")
 
                 tiktok_url = f"https://www.tiktok.com/@{user['tiktok_username'].lstrip('@')}/live"
                 server_messages = SPECIAL_USERS.get(
@@ -133,18 +132,18 @@ async def monitor_tiktok(user, client, server_config):
                 # Send announcement messages
                 if announce_channel:
                     await announce_channel.send(server_messages)
-                    client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name}")
+                    client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name} ({environment}).")
 
                 if user["tiktok_username"] == owner_tiktok_username and owner_channel:
                     await owner_channel.send(f"\U0001F534 {user['tiktok_username']} is now live on TikTok! \n\U0001F517 Watch live: {tiktok_url}")
-                    client.logger.info(f"Notified owner channel for {user['tiktok_username']}")
+                    client.logger.info(f"Notified owner channel for {user['tiktok_username']} ({environment}).")
 
                 live_status_cache[user['tiktok_username']] = True
 
             await asyncio.sleep(60)
 
         except Exception as e:
-            client.logger.error(f"Error monitoring {user['tiktok_username']}: {e}")
+            client.logger.error(f"Error monitoring {user['tiktok_username']} in {environment}: {e}")
             await asyncio.sleep(60)
 
 @bot.event
@@ -156,7 +155,7 @@ async def on_ready():
         try:
             guild_id = server_config.get('guild_id')
             if not guild_id:
-                print(f"Warning: guild_id is missing or invalid for server {environment}. Skipping this entry.")
+                print(f"Warning: guild_id is missing or invalid for {environment} environment. Skipping.")
                 continue
 
             int_server_id = int(guild_id)  # Convert guild_id to integer
@@ -168,10 +167,9 @@ async def on_ready():
                     test_guild = bot.get_guild(int_server_id)
                     test_channel = test_guild.get_channel(int(monitoring_started_channel_id))
                     if test_channel:
-                        await test_channel.send("🔔 Monitoring of TikTok streams has started! 🔔")
+                        await test_channel.send("\U0001F514 Monitoring of TikTok streams has started! \U0001F514")
                     else:
                         print(f"Test channel {monitoring_started_channel_id} not found.")
-                    continue  # Skip this server configuration if guild_id is missing
 
             # Proceed with the monitoring for TikTok users
             for user in TIKTOK_USERS:
@@ -181,7 +179,7 @@ async def on_ready():
                 }
                 client = TikTokLiveClient(unique_id=user)
                 setup_logger(client.logger)
-                asyncio.create_task(monitor_tiktok(user_info, client, server_config))
+                asyncio.create_task(monitor_tiktok(user_info, client, server_config, environment))
 
         except ValueError as e:
             print(f"Error: Invalid server ID for {server_config['guild_id']}. {e}")
@@ -207,7 +205,7 @@ async def force_announce(ctx, tiktok_username: str):
     """Force an announcement of a TikTok user's live stream"""
     announce_channel_id = 1317209936933158997  # Replace with your channel ID
     tiktok_url = f"https://www.tiktok.com/@{tiktok_username}/live"
-    message = f"🚨 {tiktok_username} is now live on TikTok! 🚨\n🔴 Watch live here: {tiktok_url}"
+    message = f"\U0001F6A8 {tiktok_username} is now live on TikTok! \U0001F6A8\n\U0001F534 Watch live here: {tiktok_url}"
 
     announce_channel = bot.get_channel(announce_channel_id)
     if announce_channel:
