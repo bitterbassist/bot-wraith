@@ -153,19 +153,30 @@ async def monitor_tiktok(user, client, server_config):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-    # Load the environment variable from the .env file
-    environment = os.getenv("ENVIRONMENT", "production")  # Default to "production" if not set
+    # Iterate through the server configurations
+    for environment, server_config in SERVER_CONFIGS.items():
+        try:
+            # Check if guild_id exists, otherwise skip
+            int_server_id = int(server_config.get('guild_id', 0))  # Default to 0 if missing
+            if int_server_id == 0:
+                print(f"Warning: guild_id is missing for server {environment}. Skipping this entry.")
+                continue  # Skip this environment if no guild_id is found
 
-    # Check if the environment is 'test' or 'production'
-    if environment == "test":
-        print("Running in the test environment.")
-        test_server_id = os.getenv("TEST_SERVER_GUILD_ID")
-        test_channel_id = os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
-        
-        # Send a message to the test server to indicate that monitoring has started
-        test_channel = bot.get_channel(int(test_channel_id))
-        if test_channel:
-            await test_channel.send("Monitoring has started for TikTok users in the test server.")
+        except ValueError:
+            print(f"Warning: Invalid server_id {server_config.get('guild_id')}. Skipping this entry.")
+            continue  # Skip invalid server IDs
+
+        # Send a message to the test server indicating the monitoring has started
+        if environment == "test":
+            monitoring_started_channel_id = server_config.get("monitoring_started_channel_id")
+            if monitoring_started_channel_id:
+                test_guild = bot.get_guild(int_server_id)
+                test_channel = test_guild.get_channel(int(monitoring_started_channel_id))
+                if test_channel:
+                    await test_channel.send("🔔 Monitoring of TikTok streams has started! 🔔")
+                else:
+                    print(f"Test channel {monitoring_started_channel_id} not found.")
+
         else:
             print(f"Test channel with ID {test_channel_id} not found.")
     else:
