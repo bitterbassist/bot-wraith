@@ -12,20 +12,31 @@ load_dotenv()
 # Bot token
 TOKEN = os.getenv("TOKEN")
 
-# Server-specific TikTok users
-TIKTOK_USERS_1307019842410516573 = os.getenv("TIKTOK_USERS_1307019842410516573")
-TIKTOK_USERS_768792770734981141 = os.getenv("TIKTOK_USERS_768792770734981141")
-TIKTOK_USERS_1145354259530010684 = os.getenv("TIKTOK_USERS_1145354259530010684")
+# List of TikTok usernames (no longer in JSON format)
+TIKTOK_USERS = os.getenv("TIKTOK_USERS", "").split(',')
 
 # Users with custom messages per server
-SPECIAL_USERS_1307019842410516573 = os.getenv("SPECIAL_USERS_1307019842410516573")
-SPECIAL_USERS_768792770734981141 = os.getenv("SPECIAL_USERS_768792770734981141")
-SPECIAL_USERS_1145354259530010684 = os.getenv("SPECIAL_USERS_1145354259530010684")
+SPECIAL_USERS = {
+    "1145354259530010684": "@tiktokbarryallen: @everyone tiktokbarryallen is now live! Get over there fast AF Boi! ,@baddiedaddyp: baddiedaddyp is live and you’re a big dill to me so get in here! ,@sykk182: sykk182 is live! Let's go show support! ,@revenant_oc: revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... ",
+    "1307019842410516573": "@sykk182: @everyone **Special Alert:** sykk182 is live! Let's go show our leader some love! ,@revenant_oc: @everyone **Special Alert:** General revenant_oc is now live! Come chill, chat and..... Brain Buffering... Please Wait... ,@odinz_den: @everyone **VIP Streamer:** odinz_den Just your not so typical phasmo/horror streamer is now live! Get in here before I get Thor after you! ",
+    "768792770734981141": "@baddiedaddyp: @everyone baddiedaddyp is live and you’re a big dill to me so get in here! ,@sykk182: sykk182 is live! Let's go show support! ,@revenant_oc: revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... "
+}
 
 # Server-specific configurations
-SERVER_CONFIGS_1307019842410516573 = os.getenv("SERVER_CONFIGS_1307019842410516573")
-SERVER_CONFIGS_768792770734981141 = os.getenv("SERVER_CONFIGS_768792770734981141")
-SERVER_CONFIGS_1145354259530010684 = os.getenv("SERVER_CONFIGS_1145354259530010684")
+SERVER_CONFIGS = {
+    "123456789012345678": {
+        "announce_channel_id": 1234567890,
+        "owner_stream_channel_id": 2345678901,
+        "owner_tiktok_username": "tiktokbarryallen",
+        "role_name": "VIP"
+    },
+    "987654321098765432": {
+        "announce_channel_id": 3456789012,
+        "owner_stream_channel_id": 4567890123,
+        "owner_tiktok_username": "sykk182",
+        "role_name": "Streamer"
+    }
+}
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -87,15 +98,16 @@ async def monitor_tiktok(user, client, guild_config):
                     client.logger.info(f"Added {role_name} role to {member.name}")
                 if not live_status:
                     tiktok_url = f"https://www.tiktok.com/@{user['tiktok_username'].lstrip('@')}/live"
-                    server_messages = SPECIAL_USERS_1307019842410516573.split(",") if SPECIAL_USERS_1307019842410516573 else []
-                    message = server_messages.get(
+                    server_messages = SPECIAL_USERS.get(
                         user["tiktok_username"],
                         f"\U0001F6D2 {user['tiktok_username']} is now live on TikTok! \n\U0001F534 **Watch live here:** {tiktok_url}"
-                    )
+                    ).split(",")
+                    
+                    message = server_messages
                     try:
                         metadata = await client.get_live_metadata()
                         if metadata:
-                            message += f"\n\U0001F4E2 Title: {metadata.get('title', 'Untitled')}\n\U0001F465 Viewers: {metadata.get('viewer_count', 'N/A')}"
+                            message += [f"\n\U0001F4E2 Title: {metadata.get('title', 'Untitled')}\n\U0001F465 Viewers: {metadata.get('viewer_count', 'N/A')}"]
                     except Exception as e:
                         client.logger.warning(f"Could not fetch metadata for {user['tiktok_username']}: {e}")
 
@@ -116,14 +128,19 @@ async def monitor_tiktok(user, client, guild_config):
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
-    for guild_id, users in TIKTOK_USERS.items():
-        for user in users:
-            client = TikTokLiveClient(unique_id=user["tiktok_username"])
+    for guild_id in SERVER_CONFIGS:
+        guild_config = SERVER_CONFIGS[guild_id]
+        for user in TIKTOK_USERS:
+            user_info = {
+                "tiktok_username": user,
+                "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")
+            }
+            client = TikTokLiveClient(unique_id=user)
             setup_logger(client.logger)
             asyncio.create_task(monitor_tiktok(
-                user,
+                user_info,
                 client,
-                {**server_configs[guild_id], "guild_id": int(guild_id)}
+                {**guild_config, "guild_id": int(guild_id)}
             ))
 
 if __name__ == "__main__":
