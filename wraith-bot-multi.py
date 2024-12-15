@@ -156,14 +156,17 @@ async def on_ready():
     # Iterate through the server configurations
     for environment, server_config in SERVER_CONFIGS.items():
         try:
-            # Check if guild_id exists, otherwise skip
-            int_server_id = int(server_config.get('guild_id', 0))  # Default to 0 if missing
-            if int_server_id == 0:
-                print(f"Warning: guild_id is missing for server {environment}. Skipping this entry.")
+            # Check if guild_id exists, and if not, skip the entry
+            guild_id = server_config.get('guild_id')
+            if not guild_id:
+                print(f"Warning: guild_id is missing or invalid for server {environment}. Skipping this entry.")
                 continue  # Skip this environment if no guild_id is found
 
+            # Convert the guild_id to an integer
+            int_server_id = int(guild_id)
+
         except ValueError:
-            print(f"Warning: Invalid server_id {server_config.get('guild_id')}. Skipping this entry.")
+            print(f"Warning: Invalid server_id {guild_id}. Skipping this entry.")
             continue  # Skip invalid server IDs
 
         # Send a message to the test server indicating the monitoring has started
@@ -176,19 +179,6 @@ async def on_ready():
                     await test_channel.send("🔔 Monitoring of TikTok streams has started! 🔔")
                 else:
                     print(f"Test channel {monitoring_started_channel_id} not found.")
-
-        else:
-            print(f"Test channel with ID {test_channel_id} not found.")
-    else:
-        print("Running in the production environment.")
-
-    # Iterate through all the server configurations and start monitoring for TikTok users
-    for server_id, guild_config in SERVER_CONFIGS.items():
-        try:
-            # Ensure that the guild_id exists and is a valid value
-            guild_id = guild_config.get('guild_id')
-            if guild_id is None:
-                print(f"Warning: guild_id is missing for server {server_id}. Skipping this entry.")
                 continue  # Skip this server configuration if guild_id is missing
 
             # Convert guild_id to an integer
