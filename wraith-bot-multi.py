@@ -153,7 +153,25 @@ async def monitor_tiktok(user, client, server_config):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-    # Iterate through all the server configurations
+    # Load the environment variable from the .env file
+    environment = os.getenv("ENVIRONMENT", "production")  # Default to "production" if not set
+
+    # Check if the environment is 'test' or 'production'
+    if environment == "test":
+        print("Running in the test environment.")
+        test_server_id = os.getenv("TEST_SERVER_GUILD_ID")
+        test_channel_id = os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
+        
+        # Send a message to the test server to indicate that monitoring has started
+        test_channel = bot.get_channel(int(test_channel_id))
+        if test_channel:
+            await test_channel.send("Monitoring has started for TikTok users in the test server.")
+        else:
+            print(f"Test channel with ID {test_channel_id} not found.")
+    else:
+        print("Running in the production environment.")
+
+    # Iterate through all the server configurations and start monitoring for TikTok users
     for server_id, guild_config in SERVER_CONFIGS.items():
         try:
             # Ensure that the guild_id exists and is a valid value
