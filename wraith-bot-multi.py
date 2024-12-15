@@ -84,16 +84,15 @@ async def monitor_tiktok(user, client, guild_config):
         client.logger.error(f"Guild with ID {guild_id} not found.")
         return
 
-    # Check if the discord_username is valid before attempting to fetch the member
-    discord_username = user.get("discord_username")
-    if not discord_username:
-        client.logger.error(f"Discord username for {user['tiktok_username']} is missing.")
-        return  # Exit if no discord_username is provided
+    # Get the discord_user_id from environment variables
+    discord_user_id = os.getenv(f"{user['tiktok_username']}_DISCORD_USER_ID")
+    if not discord_user_id:
+        client.logger.error(f"Discord user ID for {user['tiktok_username']} is missing.")
+        return
 
-    role = discord.utils.get(guild.roles, name=role_name)
-    member = guild.get_member_named(discord_username)
+    member = guild.get_member(int(discord_user_id))  # Use the ID to fetch the member
     if not member:
-        client.logger.error(f"Discord member with username {discord_username} not found.")
+        client.logger.error(f"Discord member with ID {discord_user_id} not found.")
         return
 
     announce_channel = guild.get_channel(announce_channel_id)
@@ -108,14 +107,16 @@ async def monitor_tiktok(user, client, guild_config):
         try:
             if not await client.is_live():
                 client.logger.info(f"{user['tiktok_username']} is not live. Checking again in 60 seconds.")
-                if role and role in member.roles:
+                if role_name and role_name in [role.name for role in member.roles]:
+                    role = discord.utils.get(guild.roles, name=role_name)
                     await member.remove_roles(role)
                     client.logger.info(f"Removed {role_name} role from {member.name}")
                 live_status = False
                 await asyncio.sleep(60)
             else:
                 client.logger.info(f"{user['tiktok_username']} is live!")
-                if role and role not in member.roles:
+                if role_name and role_name not in [role.name for role in member.roles]:
+                    role = discord.utils.get(guild.roles, name=role_name)
                     await member.add_roles(role)
                     client.logger.info(f"Added {role_name} role to {member.name}")
                 if not live_status:
@@ -167,7 +168,7 @@ async def on_ready():
         for user in TIKTOK_USERS:
             user_info = {
                 "tiktok_username": user,
-                "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")
+                "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Still using this for reference, but not needed
             }
             client = TikTokLiveClient(unique_id=user)
             setup_logger(client.logger)
