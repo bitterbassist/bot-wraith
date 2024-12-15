@@ -23,23 +23,33 @@ for key, value in os.environ.items():
         username = key.split("_", 2)[2]
         SPECIAL_USERS[username] = dict([msg.split(": ") for msg in value.split(",")])
 
-# Fetch the server configurations for both production and test
+# Dynamically load production server configurations
+PRODUCTION_SERVER_IDS = [
+    os.getenv("PRODUCTION_SERVER_GUILD_ID_1307019842410516573"),
+    os.getenv("PRODUCTION_SERVER_GUILD_ID_768792770734981141"),
+    os.getenv("PRODUCTION_SERVER_GUILD_ID_1145354259530010684"),
+]
+
+# Load all server configurations
 SERVER_CONFIGS = {
-    "production": {
-        "guild_id": os.getenv("PRODUCTION_SERVER_GUILD_ID"),
-        "announce_channel_id": os.getenv("PRODUCTION_SERVER_ANNOUNCE_CHANNEL_ID"),
-        "role_name": os.getenv("PRODUCTION_SERVER_ROLE_NAME"),
-        "owner_stream_channel_id": os.getenv("PRODUCTION_SERVER_OWNER_STREAM_CHANNEL_ID"),
-        "owner_tiktok_username": os.getenv("PRODUCTION_SERVER_OWNER_TIKTOK_USERNAME")
-    },
+    "production": [
+        {
+            "guild_id": server_id,
+            "announce_channel_id": os.getenv(f"PRODUCTION_SERVER_CONFIG_{server_id}_ANNOUNCE_CHANNEL_ID"),
+            "role_name": os.getenv(f"PRODUCTION_SERVER_CONFIG_{server_id}_ROLE_NAME"),
+            "owner_stream_channel_id": os.getenv(f"PRODUCTION_SERVER_CONFIG_{server_id}_OWNER_STREAM_CHANNEL_ID"),
+            "owner_tiktok_username": os.getenv(f"PRODUCTION_SERVER_CONFIG_{server_id}_OWNER_TIKTOK_USERNAME"),
+        }
+        for server_id in PRODUCTION_SERVER_IDS if server_id
+    ],
     "test": {
         "guild_id": os.getenv("TEST_SERVER_GUILD_ID"),
         "announce_channel_id": os.getenv("TEST_SERVER_ANNOUNCE_CHANNEL_ID"),
         "role_name": os.getenv("TEST_SERVER_ROLE_NAME"),
         "owner_stream_channel_id": os.getenv("TEST_SERVER_OWNER_STREAM_CHANNEL_ID"),
         "owner_tiktok_username": os.getenv("TEST_SERVER_OWNER_TIKTOK_USERNAME"),
-        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
-    }
+        "monitoring_started_channel_id": os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID"),
+    },
 }
 
 intents = discord.Intents.default()
