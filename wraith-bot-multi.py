@@ -22,16 +22,32 @@ for key, value in os.environ.items():
         username = key.split("_", 2)[2]
         SPECIAL_USERS[username] = dict([msg.split(": ") for msg in value.split(",")])
 
-# Server-specific configurations
-SERVER_CONFIGS = {}
-for key, value in os.environ.items():
-    if key.startswith("SERVER_CONFIG_"):
-        parts = key.split("_")
-        server_id = parts[1]
-        config_key = "_".join(parts[2:])
-        if server_id not in SERVER_CONFIGS:
-            SERVER_CONFIGS[server_id] = {}
-        SERVER_CONFIGS[server_id][config_key] = value
+# Fetch the guild-specific configurations using the guild_id from the environment variables
+guild_id_1307019842410516573 = os.getenv("SERVER_CONFIG_1307019842410516573_GUILD_ID")
+guild_id_768792770734981141 = os.getenv("SERVER_CONFIG_768792770734981141_GUILD_ID")
+guild_id_1145354259530010684 = os.getenv("SERVER_CONFIG_1145354259530010684_GUILD_ID")
+
+# Use these guild IDs in your server-specific configuration
+SERVER_CONFIGS = {
+    guild_id_1307019842410516573: {
+        "announce_channel_id": os.getenv("SERVER_CONFIG_1307019842410516573_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("SERVER_CONFIG_1307019842410516573_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_1307019842410516573_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("SERVER_CONFIG_1307019842410516573_OWNER_TIKTOK_USERNAME")
+    },
+    guild_id_768792770734981141: {
+        "announce_channel_id": os.getenv("SERVER_CONFIG_768792770734981141_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("SERVER_CONFIG_768792770734981141_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_768792770734981141_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("SERVER_CONFIG_768792770734981141_OWNER_TIKTOK_USERNAME")
+    },
+    guild_id_1145354259530010684: {
+        "announce_channel_id": os.getenv("SERVER_CONFIG_1145354259530010684_ANNOUNCE_CHANNEL_ID"),
+        "role_name": os.getenv("SERVER_CONFIG_1145354259530010684_ROLE_NAME"),
+        "owner_stream_channel_id": os.getenv("SERVER_CONFIG_1145354259530010684_OWNER_STREAM_CHANNEL_ID"),
+        "owner_tiktok_username": os.getenv("SERVER_CONFIG_1145354259530010684_OWNER_TIKTOK_USERNAME")
+    }
+}
 
 # Discord bot intents
 intents = discord.Intents.default()
