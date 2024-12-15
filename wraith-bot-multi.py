@@ -191,7 +191,7 @@ async def force_announce(ctx, tiktok_username: str):
     message = f"🚨 {tiktok_username} is now live on TikTok! 🚨\n🔴 Watch live here: {tiktok_url}"
 
     announce_channel = bot.get_channel(announce_channel_id)
-    if announce_channel:1317209936933158997
+    if announce_channel:
         await announce_channel.send(message)
         await ctx.send(f"Announcement sent for {tiktok_username}!")
     else:
@@ -201,6 +201,11 @@ async def force_announce(ctx, tiktok_username: str):
 async def status(ctx):
     """Check the bot's current status"""
     await ctx.send(f"Bot is online as {bot.user}. Monitoring {len(TIKTOK_USERS)} TikTok users.")
+
+@bot.event
+async def on_command_error(ctx, error):
+    print(f"Error occurred: {error}")
+
 
 if __name__ == "__main__":
     bot.run(TOKEN)
