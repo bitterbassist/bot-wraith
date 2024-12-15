@@ -5,6 +5,7 @@ from TikTokLive import TikTokLiveClient
 from TikTokLive.client.logger import LogLevel
 from dotenv import load_dotenv
 import os
+import json  # Added import for json
 
 # Load environment variables
 load_dotenv()
@@ -12,31 +13,14 @@ load_dotenv()
 # Bot token
 TOKEN = os.getenv("TOKEN")
 
-# List of TikTok usernames (no longer in JSON format)
-TIKTOK_USERS = os.getenv("TIKTOK_USERS", "").split(',')
+# Parse TIKTOK_USERS from environment variable and convert it back to a dictionary
+TIKTOK_USERS = json.loads(os.getenv("TIKTOK_USERS", "{}"))
 
-# Users with custom messages per server
-SPECIAL_USERS = {
-    "1145354259530010684": "@tiktokbarryallen: @everyone tiktokbarryallen is now live! Get over there fast AF Boi! ,@baddiedaddyp: baddiedaddyp is live and you’re a big dill to me so get in here! ,@sykk182: sykk182 is live! Let's go show support! ,@revenant_oc: revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... ",
-    "1307019842410516573": "@sykk182: @everyone **Special Alert:** sykk182 is live! Let's go show our leader some love! ,@revenant_oc: @everyone **Special Alert:** General revenant_oc is now live! Come chill, chat and..... Brain Buffering... Please Wait... ,@odinz_den: @everyone **VIP Streamer:** odinz_den Just your not so typical phasmo/horror streamer is now live! Get in here before I get Thor after you! ",
-    "768792770734981141": "@baddiedaddyp: @everyone baddiedaddyp is live and you’re a big dill to me so get in here! ,@sykk182: sykk182 is live! Let's go show support! ,@revenant_oc: revenant_oc is live! Come chill, chat and..... Brain Buffering... Please Wait... "
-}
+# Parse SPECIAL_USERS from environment variable and convert it back to a dictionary
+SPECIAL_USERS = json.loads(os.getenv("SPECIAL_USERS", "{}"))
 
-# Server-specific configurations
-SERVER_CONFIGS = {
-    "123456789012345678": {
-        "announce_channel_id": 1234567890,
-        "owner_stream_channel_id": 2345678901,
-        "owner_tiktok_username": "tiktokbarryallen",
-        "role_name": "VIP"
-    },
-    "987654321098765432": {
-        "announce_channel_id": 3456789012,
-        "owner_stream_channel_id": 4567890123,
-        "owner_tiktok_username": "sykk182",
-        "role_name": "Streamer"
-    }
-}
+# Parse SERVER_CONFIGS from environment variable and convert it back to a dictionary
+SERVER_CONFIGS = json.loads(os.getenv("SERVER_CONFIGS", "{}"))
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -142,6 +126,42 @@ async def on_ready():
                 client,
                 {**guild_config, "guild_id": int(guild_id)}
             ))
+
+# Testing Commands
+
+@bot.command()
+async def ping(ctx):
+    """Simple ping command to check if the bot is online"""
+    await ctx.send("Pong!")
+
+@bot.command()
+async def check_live(ctx, tiktok_username: str):
+    """Check if a specific TikTok user is live"""
+    client = TikTokLiveClient(unique_id=tiktok_username)
+    live_status = await client.is_live()
+    if live_status:
+        await ctx.send(f"{tiktok_username} is live!")
+    else:
+        await ctx.send(f"{tiktok_username} is not live.")
+
+@bot.command()
+async def force_announce(ctx, tiktok_username: str):
+    """Force an announcement of a TikTok user's live stream"""
+    announce_channel_id = 1234567890  # Replace with your channel ID
+    tiktok_url = f"https://www.tiktok.com/@{tiktok_username}/live"
+    message = f"🚨 {tiktok_username} is now live on TikTok! 🚨\n🔴 Watch live here: {tiktok_url}"
+
+    announce_channel = bot.get_channel(announce_channel_id)
+    if announce_channel:
+        await announce_channel.send(message)
+        await ctx.send(f"Announcement sent for {tiktok_username}!")
+    else:
+        await ctx.send("Announce channel not found!")
+
+@bot.command()
+async def status(ctx):
+    """Check the bot's current status"""
+    await ctx.send(f"Bot is online as {bot.user}. Monitoring {len(TIKTOK_USERS)} TikTok users.")
 
 if __name__ == "__main__":
     bot.run(TOKEN)
