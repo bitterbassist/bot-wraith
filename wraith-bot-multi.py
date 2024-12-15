@@ -238,6 +238,7 @@ async def on_ready():
             print(f"Error: Invalid server ID for test server. {e}")
             return  # Skip invalid server IDs
 
+
 @bot.command()
 async def ping(ctx):
     """Simple ping command to check if the bot is online"""
