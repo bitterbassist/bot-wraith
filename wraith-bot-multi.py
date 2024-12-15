@@ -186,12 +186,12 @@ async def check_live(ctx, tiktok_username: str):
 @bot.command()
 async def force_announce(ctx, tiktok_username: str):
     """Force an announcement of a TikTok user's live stream"""
-    announce_channel_id = 1234567890  # Replace with your channel ID
+    announce_channel_id = 1317209936933158997  # Replace with your channel ID
     tiktok_url = f"https://www.tiktok.com/@{tiktok_username}/live"
     message = f"🚨 {tiktok_username} is now live on TikTok! 🚨\n🔴 Watch live here: {tiktok_url}"
 
     announce_channel = bot.get_channel(announce_channel_id)
-    if announce_channel:
+    if announce_channel:1317209936933158997
         await announce_channel.send(message)
         await ctx.send(f"Announcement sent for {tiktok_username}!")
     else:
