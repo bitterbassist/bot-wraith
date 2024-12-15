@@ -145,6 +145,10 @@ async def on_ready():
     for server_id, guild_config in SERVER_CONFIGS.items():
         # Make sure 'server_id' is an integer before proceeding
         try:
+            # Validate that server_id is a valid integer before using it
+            if server_id is None or not server_id.isdigit():
+                print(f"Warning: Invalid or missing server_id {server_id}. Skipping this entry.")
+                continue
             int_server_id = int(server_id)
         except ValueError:
             print(f"Warning: Invalid server_id {server_id}. Skipping this entry.")
