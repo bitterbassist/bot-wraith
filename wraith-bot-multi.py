@@ -168,21 +168,53 @@ async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
     # Iterate through the server configurations
-    for environment, server_config in SERVER_CONFIGS.items():
+    for environment, server_configs in SERVER_CONFIGS.items():
         try:
-            guild_id = server_config.get('guild_id')
-            if not guild_id:
-                # Skip test server warnings
-                if environment == "test":
+            # If the environment is "production", server_configs is a list
+            # If the environment is "test", server_configs is a dictionary
+            if isinstance(server_configs, list):
+                for server_config in server_configs:
+                    guild_id = server_config.get('guild_id')
+                    if not guild_id:
+                        # Skip test server warnings
+                        if environment == "test":
+                            continue
+
+                        print(f"Warning: guild_id is missing or invalid for {environment} environment. Skipping.")
+                        continue
+
+                    int_server_id = int(guild_id)  # Convert guild_id to integer
+
+                    # Send a message to the test server indicating the monitoring has started
+                    if environment == "test":
+                        monitoring_started_channel_id = server_config.get("monitoring_started_channel_id")
+                        if monitoring_started_channel_id:
+                            test_guild = bot.get_guild(int_server_id)
+                            test_channel = test_guild.get_channel(int(monitoring_started_channel_id))
+                            if test_channel:
+                                await test_channel.send("\U0001F514 Monitoring of TikTok streams has started! \U0001F514")
+
+                    # Proceed with the monitoring for TikTok users
+                    for user in TIKTOK_USERS:
+                        user_info = {
+                            "tiktok_username": user,
+                            "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Still using this for reference
+                        }
+                        client = TikTokLiveClient(unique_id=user)
+                        setup_logger(client.logger)
+                        asyncio.create_task(monitor_tiktok(user_info, client, server_config, environment))
+
+            elif isinstance(server_configs, dict):
+                # Handle the "test" environment
+                server_config = server_configs
+                guild_id = server_config.get('guild_id')
+                if not guild_id:
+                    print(f"Warning: guild_id is missing or invalid for {environment} environment. Skipping.")
                     continue
 
-                print(f"Warning: guild_id is missing or invalid for {environment} environment. Skipping.")
-                continue
+                int_server_id = int(guild_id)  # Convert guild_id to integer
 
-            int_server_id = int(guild_id)  # Convert guild_id to integer
-
-            # Send a message to the test server indicating the monitoring has started
-            if environment == "test":
+                # Send a message to the test server indicating the monitoring has started
                 monitoring_started_channel_id = server_config.get("monitoring_started_channel_id")
                 if monitoring_started_channel_id:
                     test_guild = bot.get_guild(int_server_id)
@@ -190,15 +222,15 @@ async def on_ready():
                     if test_channel:
                         await test_channel.send("\U0001F514 Monitoring of TikTok streams has started! \U0001F514")
 
-            # Proceed with the monitoring for TikTok users
-            for user in TIKTOK_USERS:
-                user_info = {
-                    "tiktok_username": user,
-                    "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Still using this for reference
-                }
-                client = TikTokLiveClient(unique_id=user)
-                setup_logger(client.logger)
-                asyncio.create_task(monitor_tiktok(user_info, client, server_config, environment))
+                # Proceed with the monitoring for TikTok users
+                for user in TIKTOK_USERS:
+                    user_info = {
+                        "tiktok_username": user,
+                        "discord_username": os.getenv(f"{user}_DISCORD_USERNAME")  # Still using this for reference
+                    }
+                    client = TikTokLiveClient(unique_id=user)
+                    setup_logger(client.logger)
+                    asyncio.create_task(monitor_tiktok(user_info, client, server_config, environment))
 
         except ValueError as e:
             # Skip test server warnings
