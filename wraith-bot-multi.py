@@ -167,6 +167,11 @@ async def monitor_tiktok(user, client, server_config, environment):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
+    # Set the custom status for the bot
+    await bot.change_presence(
+        activity=discord.Game(name="Doing Wraith Bot Stuff")  # Custom status message
+    )
+
     # Iterate through the server configurations
     for environment, server_configs in SERVER_CONFIGS.items():
         try:
