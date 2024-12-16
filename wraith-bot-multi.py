@@ -245,6 +245,44 @@ async def ping(ctx):
     await ctx.send("Pong!")
 
 @bot.command()
+async def bot_status(ctx):
+    """Tells you that the bot is online in all servers"""
+    online_guilds = [guild.name for guild in bot.guilds]  # List all guild names
+    if online_guilds:
+        await ctx.send(f"Bot is online in the following Discord servers:\n" + "\n".join(online_guilds))
+    else:
+        await ctx.send("Bot is not currently in any Discord servers.")
+
+@bot.command()
+async def test_post(ctx):
+    """Send a test message to specific channels by ID across all servers."""
+    test_message = "🚨 This is a test announcement! The wonderful people at Revenant Studios sent this message to ensure that your bot is online and functioning. This may also include bot updates and patches. We thank you for using Wraith Bot! 🚨"
+
+    # Predefined list of channel IDs (as integers, not names)
+    target_channel_ids = [
+        1209176431968653442,  # BarryAllen Self-Promote
+        1306652093037285386,  # Pickle Squad Self=promoting
+        1308455912876282006,  # Sykk Shadows tik-tik-self-promo
+        1317731202026700882,  # wraith=bot-monitoring
+    ]
+    
+    # Iterate through all guilds the bot is connected to
+    for guild in bot.guilds:
+        # Iterate through each text channel in the guild
+        for channel in guild.text_channels:
+            # Check if the channel's ID is in the list of target IDs
+            if channel.id in target_channel_ids:
+                try:
+                    # Send the test message to the channel
+                    await channel.send(test_message)
+                    print(f"Test message sent to {channel.name} in {guild.name}")
+                except Exception as e:
+                    print(f"Failed to send message to {channel.name} in {guild.name}: {e}")
+                    continue
+    
+    await ctx.send("Test message sent to the specified channels.")
+
+@bot.command()
 async def check_live(ctx, tiktok_username: str):
     """Check if a specific TikTok user is live"""
     client = TikTokLiveClient(unique_id=tiktok_username)
