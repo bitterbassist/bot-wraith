@@ -93,13 +93,15 @@ async def monitor_tiktok(user, client, server_config, environment):
 
     guild = bot.get_guild(guild_id)
     if not guild:
-        client.logger.error(f"Guild with ID {guild_id} not found in {environment} environment.")
+        if environment != "test":
+            client.logger.error(f"Guild with ID {guild_id} not found in {environment} environment.")
         return
 
     # Get the discord_username from environment variables
     discord_username = os.getenv(f"{user['tiktok_username']}_DISCORD_USERNAME")
     if not discord_username:
-        client.logger.error(f"Discord username for {user['tiktok_username']} is missing in {environment}.")
+        if environment != "test":
+            client.logger.error(f"Discord username for {user['tiktok_username']} is missing in {environment}.")
         return
 
     # Search for members by username (ignoring discriminator)
@@ -107,17 +109,20 @@ async def monitor_tiktok(user, client, server_config, environment):
         member for member in guild.members if member.name.lower() == discord_username.lower()
     ]
     if not matching_members:
-        client.logger.error(f"No members with username '{discord_username}' found in {environment}.")
+        if environment != "test":
+            client.logger.error(f"No members with username '{discord_username}' found in {environment}.")
         return
     elif len(matching_members) > 1:
-        client.logger.warning(f"Multiple members with username '{discord_username}' found. Using the first match.")
+        if environment != "test":
+            client.logger.warning(f"Multiple members with username '{discord_username}' found. Using the first match.")
 
     member = matching_members[0]
-    announce_channel = guild.get_channel(int(announce_channel_id))
-    owner_channel = guild.get_channel(int(owner_stream_channel_id))
+    announce_channel = guild.get_channel(int(announce_channel_id)) if announce_channel_id else None
+    owner_channel = guild.get_channel(int(owner_stream_channel_id)) if owner_stream_channel_id else None
 
-    setup_logger(client.logger)
-    client.logger.info(f"Starting TikTok monitoring for {user['tiktok_username']} in {environment}.")
+    if environment != "test":
+        setup_logger(client.logger)
+        client.logger.info(f"Starting TikTok monitoring for {user['tiktok_username']} in {environment}.")
 
     while True:
         try:
@@ -130,21 +135,25 @@ async def monitor_tiktok(user, client, server_config, environment):
                 live_status_cache[user['tiktok_username']] = live_status
 
             if not live_status:
-                client.logger.info(f"{user['tiktok_username']} is not live in {environment}. Checking again in 60 seconds.")
+                if environment != "test":
+                    client.logger.info(f"{user['tiktok_username']} is not live in {environment}. Checking again in 60 seconds.")
                 if role_name and role_name in [role.name for role in member.roles]:
                     role = discord.utils.get(guild.roles, name=role_name)
                     await member.remove_roles(role)
-                    client.logger.info(f"Removed {role_name} role from {member.name} in {environment}.")
+                    if environment != "test":
+                        client.logger.info(f"Removed {role_name} role from {member.name} in {environment}.")
                 await asyncio.sleep(60)
                 continue
 
             # If the user is live and the status has changed, send messages and update roles
             if live_status:
-                client.logger.info(f"{user['tiktok_username']} is live in {environment}!")
+                if environment != "test":
+                    client.logger.info(f"{user['tiktok_username']} is live in {environment}!")
                 if role_name and role_name not in [role.name for role in member.roles]:
                     role = discord.utils.get(guild.roles, name=role_name)
                     await member.add_roles(role)
-                    client.logger.info(f"Added {role_name} role to {member.name} in {environment}.")
+                    if environment != "test":
+                        client.logger.info(f"Added {role_name} role to {member.name} in {environment}.")
 
                 tiktok_url = f"https://www.tiktok.com/@{user['tiktok_username'].lstrip('@')}/live"
                 server_messages = SPECIAL_USERS.get(
@@ -155,18 +164,21 @@ async def monitor_tiktok(user, client, server_config, environment):
                 # Send announcement messages
                 if announce_channel:
                     await announce_channel.send(server_messages)
-                    client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name} ({environment}).")
+                    if environment != "test":
+                        client.logger.info(f"Announced live stream for {user['tiktok_username']} in channel {announce_channel.name} ({environment}).")
 
                 if user["tiktok_username"] == owner_tiktok_username and owner_channel:
                     await owner_channel.send(f"\U0001F534 {user['tiktok_username']} is now live on TikTok! \n\U0001F517 Watch live: {tiktok_url}")
-                    client.logger.info(f"Notified owner channel for {user['tiktok_username']} ({environment}).")
+                    if environment != "test":
+                        client.logger.info(f"Notified owner channel for {user['tiktok_username']} ({environment}).")
 
                 live_status_cache[user['tiktok_username']] = True
 
             await asyncio.sleep(60)
 
         except Exception as e:
-            client.logger.error(f"Error monitoring {user['tiktok_username']} in {environment}: {e}")
+            if environment != "test":
+                client.logger.error(f"Error monitoring {user['tiktok_username']} in {environment}: {e}")
             await asyncio.sleep(60)
 
 # Updated on_ready function to exclude error logging for the test server
@@ -303,6 +315,23 @@ async def check_live(ctx, tiktok_username: str):
         await ctx.send(f"{tiktok_username} is live!")
     else:
         await ctx.send(f"{tiktok_username} is not live.")
+
+@bot.command()
+async def check_live_all(ctx):
+    """Check the live status of all TikTok users being monitored"""
+    results = []
+    for username in TIKTOK_USERS:
+        if not username.strip():
+            continue
+        client = TikTokLiveClient(unique_id=username)
+        live_status = await client.is_live()
+        status_message = f"{username} is {'live' if live_status else 'not live'}"
+        results.append(status_message)
+    
+    if results:
+        await ctx.send("\n".join(results))
+    else:
+        await ctx.send("No TikTok users are currently being monitored.")
 
 @bot.command()
 async def force_announce(ctx, tiktok_username: str):
