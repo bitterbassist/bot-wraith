@@ -21,7 +21,14 @@ SPECIAL_USERS = {}
 for key, value in os.environ.items():
     if key.startswith("SPECIAL_USERS_"):
         username = key.split("_", 2)[2]
-        SPECIAL_USERS[username] = dict([msg.split(": ") for msg in value.split(",")])
+        try:
+            SPECIAL_USERS[username] = {
+                key_value[0]: key_value[1]
+                for msg in value.split(",")
+                if len(key_value := msg.split(": ")) == 2
+            }
+        except Exception as e:
+            print(f"Error processing special user {username}: {value}. Error: {e}")
 
 # Dynamically load production server configurations
 PRODUCTION_SERVER_IDS = [
