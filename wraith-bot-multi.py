@@ -129,34 +129,43 @@ async def remove_user(ctx, user_type: str, username: str):
     else:
         await ctx.send("Invalid user type! Use 'special' or 'VIP'.")
 
-# Existing monitor TikTok logic remains the same
-async def monitor_tiktok(user, client, server_config, environment):
-    guild_id = int(server_config.get("guild_id", 0))  # Handle missing guild_id
-    announce_channel_id = server_config.get("announce_channel_id", 0)
-    owner_stream_channel_id = server_config.get("owner_stream_channel_id", 0)
-    owner_tiktok_username = server_config.get("owner_tiktok_username", "")
-    role_name = server_config.get("role_name", "")
+# Force announce command
+@bot.command()
+async def force_announce(ctx, tiktok_username: str):
+    """Force an announcement for a TikTok user."""
+    tiktok_url = f"https://www.tiktok.com/@{tiktok_username}/live"
+    message = f"\U0001F6A8 {tiktok_username} is now live on TikTok! \n\U0001F517 Watch live here: {tiktok_url}"
+    await ctx.send(message)
 
-    guild = bot.get_guild(guild_id)
-    if not guild:
-        return
+# Test post command
+@bot.command()
+async def test_post(ctx):
+    """Send a test message to verify bot functionality."""
+    await ctx.send("\U0001F6A8 This is a test announcement from Wraith Bot. All systems are functioning correctly! \U0001F6A8")
 
-    announce_channel = guild.get_channel(int(announce_channel_id)) if announce_channel_id else None
-    tiktok_url = f"https://www.tiktok.com/@{user['tiktok_username'].lstrip('@')}/live"
+# Ping command
+@bot.command()
+async def ping(ctx):
+    """Simple ping command to check if the bot is online"""
+    await ctx.send("Pong!")
 
-    user_configs = SPECIAL_USERS.get(user["tiktok_username"], [])
-    message_to_send = None
-
-    for config in user_configs:
-        if str(guild_id) == config.get("server"):
-            message_to_send = config.get("message", None)
-            break
-
-    if not message_to_send:
-        message_to_send = f"\U0001F6D2 {user['tiktok_username']} is now live on TikTok! \n\U0001F534 **Watch live here:** {tiktok_url}"
-
-    if announce_channel:
-        await announce_channel.send(message_to_send)
+# Check live status for all TikTok users
+@bot.command()
+async def check_live_all(ctx):
+    """Check the live status of all monitored TikTok users."""
+    results = []
+    for username in TIKTOK_USERS:
+        if not username.strip():
+            continue
+        client = TikTokLiveClient(unique_id=username)
+        live_status = client.is_live()  # Simplified for example; make sure to await if async
+        status_message = f"{username} is {'live' if live_status else 'not live'}"
+        results.append(status_message)
+    
+    if results:
+        await ctx.send("\n".join(results))
+    else:
+        await ctx.send("No TikTok users are currently being monitored.")
 
 # Updated on_ready function
 @bot.event
@@ -167,11 +176,6 @@ async def on_ready():
     await bot.change_presence(
         activity=discord.Game(name="Doing Wraith Bot Stuff")
     )
-
-@bot.command()
-async def ping(ctx):
-    """Simple ping command to check if the bot is online"""
-    await ctx.send("Pong!")
 
 if __name__ == "__main__":
     bot.run(TOKEN)
