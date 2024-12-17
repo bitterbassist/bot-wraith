@@ -92,6 +92,16 @@ def setup_logger(logger):
 # Cache for live status to reduce frequent checks
 live_status_cache = {}
 
+async def send_debug_logs_to_channel(log_message):
+    """Sends debug logs to a specified channel in the test server."""
+    test_server_id = os.getenv("TEST_SERVER_GUILD_ID")
+    debug_channel_id = os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
+    test_guild = bot.get_guild(int(test_server_id))
+    if test_guild:
+        debug_channel = test_guild.get_channel(int(debug_channel_id))
+        if debug_channel:
+            await debug_channel.send(f"`DEBUG LOG:` {log_message}")
+
 # Add user command
 @bot.command()
 async def add_user(ctx, user_type: str, username: str, details: str):
@@ -164,6 +174,7 @@ async def check_live_all(ctx):
         except Exception as e:
             status_message = f"{username}: Error checking live status - {e}"
         results.append(status_message)
+        await send_debug_logs_to_channel(status_message)  # Send debug output to test channel
 
     if results:
         await ctx.send("\n".join(results))
@@ -180,7 +191,7 @@ async def on_ready():
         activity=discord.Game(name="Doing Wraith Bot Stuff")
     )
 
-    # Perform an initial live status check for all monitored TikTok users
+    print("Starting initial live status check...")
     results = []
     for username in TIKTOK_USERS:
         if not username.strip():
@@ -193,19 +204,12 @@ async def on_ready():
                 message = f"\U0001F6A8 {username} is already live on TikTok! \n\U0001F517 Watch live here: {tiktok_url}"
                 print(message)
                 results.append(message)
+            else:
+                print(f"{username} is not live.")
         except Exception as e:
-            results.append(f"{username}: Error checking live status - {e}")
-
-    # Send messages to appropriate announce channels
-    if results:
-        for config in SERVER_CONFIGS.get("production", []):
-            guild = bot.get_guild(int(config["guild_id"]))
-            announce_channel_id = config.get("announce_channel_id")
-            if guild and announce_channel_id:
-                channel = guild.get_channel(int(announce_channel_id))
-                if channel:
-                    for result in results:
-                        await channel.send(result)
+            error_message = f"Error checking live status for {username}: {e}"
+            print(error_message)
+            await send_debug_logs_to_channel(error_message)
 
     print("Initial live status check complete.")
 
