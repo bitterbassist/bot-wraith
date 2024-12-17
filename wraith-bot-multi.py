@@ -180,5 +180,34 @@ async def on_ready():
         activity=discord.Game(name="Doing Wraith Bot Stuff")
     )
 
+    # Perform an initial live status check for all monitored TikTok users
+    results = []
+    for username in TIKTOK_USERS:
+        if not username.strip():
+            continue
+        client = TikTokLiveClient(unique_id=username)
+        try:
+            live_status = await client.is_live()  # Await the coroutine properly
+            if live_status:
+                tiktok_url = f"https://www.tiktok.com/@{username}/live"
+                message = f"\U0001F6A8 {username} is already live on TikTok! \n\U0001F517 Watch live here: {tiktok_url}"
+                print(message)
+                results.append(message)
+        except Exception as e:
+            results.append(f"{username}: Error checking live status - {e}")
+
+    # Send messages to appropriate announce channels
+    if results:
+        for config in SERVER_CONFIGS.get("production", []):
+            guild = bot.get_guild(int(config["guild_id"]))
+            announce_channel_id = config.get("announce_channel_id")
+            if guild and announce_channel_id:
+                channel = guild.get_channel(int(announce_channel_id))
+                if channel:
+                    for result in results:
+                        await channel.send(result)
+
+    print("Initial live status check complete.")
+
 if __name__ == "__main__":
     bot.run(TOKEN)
