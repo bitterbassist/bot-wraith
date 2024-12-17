@@ -129,7 +129,8 @@ async def on_ready():
                 if username in SPECIAL_USERS:
                     for config in SPECIAL_USERS[username]:
                         server_id = config.get("server")
-                        message = config.get("message", f"\U0001F6A8 {username} is now live! Watch here: {tiktok_url}")
+                        custom_message = config.get("message", "")
+                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
                         guild = bot.get_guild(int(server_id))
                         if guild:
                             for server_config in SERVER_CONFIGS.get("production", []):
@@ -145,7 +146,8 @@ async def on_ready():
                 if username in VIP_USERS:
                     for config in VIP_USERS[username]:
                         server_id = config.get("server", "")
-                        message = config.get("message", f"\U0001F6A8 {username} is now live on TikTok! Watch here: {tiktok_url}")
+                        custom_message = config.get("message", "")
+                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
                         guild = bot.get_guild(int(server_id)) if server_id else None
                         if guild:
                             for server_config in SERVER_CONFIGS.get("production", []):
@@ -167,6 +169,7 @@ async def on_ready():
             await send_debug_logs_to_channel(error_message)
 
     print("Initial live status check complete.")
+
 
 if __name__ == "__main__":
     bot.run(TOKEN)
