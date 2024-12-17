@@ -193,6 +193,7 @@ async def on_ready():
 
     print("Starting initial live status check...")
     results = []
+
     for username in TIKTOK_USERS:
         if not username.strip():
             continue
@@ -201,17 +202,60 @@ async def on_ready():
             live_status = await client.is_live()  # Await the coroutine properly
             if live_status:
                 tiktok_url = f"https://www.tiktok.com/@{username}/live"
-                message = f"\U0001F6A8 {username} is already live on TikTok! \n\U0001F517 Watch live here: {tiktok_url}"
-                print(message)
-                results.append(message)
-            else:
-                print(f"{username} is not live.")
+                message_sent = False
+
+                # Check SPECIAL_USERS for a configured message
+                if username in SPECIAL_USERS:
+                    for config in SPECIAL_USERS[username]:
+                        server_id = config.get("server")
+                        message = config.get("message", f"\U0001F6A8 {username} is now live! Watch here: {tiktok_url}")
+                        guild = bot.get_guild(int(server_id))
+                        if guild:
+                            # Dynamically fetch the announce channel for the production server
+                            announce_channel_id = None
+                            for server_config in SERVER_CONFIGS.get("production", []):
+                                if str(guild.id) == server_config.get("guild_id"):
+                                    announce_channel_id = server_config.get("announce_channel_id")
+                                    break
+
+                            if announce_channel_id:
+                                announce_channel = guild.get_channel(int(announce_channel_id))
+                                if announce_channel:
+                                    await announce_channel.send(message)
+                                    message_sent = True
+
+                # Check VIP_USERS for a configured message
+                if username in VIP_USERS:
+                    for config in VIP_USERS[username]:
+                        server_id = config.get("server", "")
+                        message = config.get("message", f"\U0001F6A8 {username} is now live on TikTok! Watch here: {tiktok_url}")
+                        guild = bot.get_guild(int(server_id)) if server_id else None
+                        if guild:
+                            # Dynamically fetch the announce channel for the production server
+                            announce_channel_id = None
+                            for server_config in SERVER_CONFIGS.get("production", []):
+                                if str(guild.id) == server_config.get("guild_id"):
+                                    announce_channel_id = server_config.get("announce_channel_id")
+                                    break
+
+                            if announce_channel_id:
+                                announce_channel = guild.get_channel(int(announce_channel_id))
+                                if announce_channel:
+                                    await announce_channel.send(message)
+                                    message_sent = True
+
+                if not message_sent:
+                    print(f"No announcement sent for {username}. Missing configuration.")
+                else:
+                    print(f"Announcement sent for {username}.")
         except Exception as e:
             error_message = f"Error checking live status for {username}: {e}"
             print(error_message)
             await send_debug_logs_to_channel(error_message)
 
     print("Initial live status check complete.")
+
+
 
 if __name__ == "__main__":
     bot.run(TOKEN)
