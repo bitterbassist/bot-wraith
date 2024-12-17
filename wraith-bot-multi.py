@@ -158,10 +158,13 @@ async def check_live_all(ctx):
         if not username.strip():
             continue
         client = TikTokLiveClient(unique_id=username)
-        live_status = client.is_live()  # Simplified for example; make sure to await if async
-        status_message = f"{username} is {'live' if live_status else 'not live'}"
+        try:
+            live_status = await client.is_live()  # Await the coroutine properly
+            status_message = f"{username} is {'live' if live_status else 'not live'}"
+        except Exception as e:
+            status_message = f"{username}: Error checking live status - {e}"
         results.append(status_message)
-    
+
     if results:
         await ctx.send("\n".join(results))
     else:
