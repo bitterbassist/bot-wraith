@@ -102,85 +102,6 @@ async def send_debug_logs_to_channel(log_message):
         if debug_channel:
             await debug_channel.send(f"`DEBUG LOG:` {log_message}")
 
-# Add user command
-@bot.command()
-async def add_user(ctx, user_type: str, username: str, details: str):
-    """Add a user to the specified list: special or VIP."""
-    config_list = []
-    for config in details.split(";"):
-        config_list.append({
-            k.strip(): v.strip() for part in config.split(",") if len(part.split(":")) == 2 for k, v in [part.split(":")]
-        })
-    if user_type.lower() == "special":
-        SPECIAL_USERS[username] = config_list
-        await ctx.send(f"User {username} added to SPECIAL_USERS with details: {config_list}.")
-    elif user_type.lower() == "vip":
-        VIP_USERS[username] = config_list
-        await ctx.send(f"User {username} added to VIP_USERS with details: {config_list}.")
-    else:
-        await ctx.send("Invalid user type! Use 'special' or 'VIP'.")
-
-# Remove user command
-@bot.command()
-async def remove_user(ctx, user_type: str, username: str):
-    """Remove a user from the specified list: special or VIP."""
-    if user_type.lower() == "special":
-        if username in SPECIAL_USERS:
-            del SPECIAL_USERS[username]
-            await ctx.send(f"User {username} removed from SPECIAL_USERS.")
-        else:
-            await ctx.send(f"User {username} not found in SPECIAL_USERS.")
-    elif user_type.lower() == "vip":
-        if username in VIP_USERS:
-            del VIP_USERS[username]
-            await ctx.send(f"User {username} removed from VIP_USERS.")
-        else:
-            await ctx.send(f"User {username} not found in VIP_USERS.")
-    else:
-        await ctx.send("Invalid user type! Use 'special' or 'VIP'.")
-
-# Force announce command
-@bot.command()
-async def force_announce(ctx, tiktok_username: str):
-    """Force an announcement for a TikTok user."""
-    tiktok_url = f"https://www.tiktok.com/@{tiktok_username}/live"
-    message = f"\U0001F6A8 {tiktok_username} is now live on TikTok! \n\U0001F517 Watch live here: {tiktok_url}"
-    await ctx.send(message)
-
-# Test post command
-@bot.command()
-async def test_post(ctx):
-    """Send a test message to verify bot functionality."""
-    await ctx.send("\U0001F6A8 This is a test announcement from Wraith Bot. All systems are functioning correctly! \U0001F6A8")
-
-# Ping command
-@bot.command()
-async def ping(ctx):
-    """Simple ping command to check if the bot is online"""
-    await ctx.send("Pong!")
-
-# Check live status for all TikTok users
-@bot.command()
-async def check_live_all(ctx):
-    """Check the live status of all monitored TikTok users."""
-    results = []
-    for username in TIKTOK_USERS:
-        if not username.strip():
-            continue
-        client = TikTokLiveClient(unique_id=username)
-        try:
-            live_status = await client.is_live()  # Await the coroutine properly
-            status_message = f"{username} is {'live' if live_status else 'not live'}"
-        except Exception as e:
-            status_message = f"{username}: Error checking live status - {e}"
-        results.append(status_message)
-        await send_debug_logs_to_channel(status_message)  # Send debug output to test channel
-
-    if results:
-        await ctx.send("\n".join(results))
-    else:
-        await ctx.send("No TikTok users are currently being monitored.")
-
 # Updated on_ready function
 @bot.event
 async def on_ready():
@@ -211,18 +132,14 @@ async def on_ready():
                         message = config.get("message", f"\U0001F6A8 {username} is now live! Watch here: {tiktok_url}")
                         guild = bot.get_guild(int(server_id))
                         if guild:
-                            # Dynamically fetch the announce channel for the production server
-                            announce_channel_id = None
                             for server_config in SERVER_CONFIGS.get("production", []):
                                 if str(guild.id) == server_config.get("guild_id"):
                                     announce_channel_id = server_config.get("announce_channel_id")
-                                    break
-
-                            if announce_channel_id:
-                                announce_channel = guild.get_channel(int(announce_channel_id))
-                                if announce_channel:
-                                    await announce_channel.send(message)
-                                    message_sent = True
+                                    if announce_channel_id:
+                                        announce_channel = guild.get_channel(int(announce_channel_id))
+                                        if announce_channel:
+                                            await announce_channel.send(message)
+                                            message_sent = True
 
                 # Check VIP_USERS for a configured message
                 if username in VIP_USERS:
@@ -231,18 +148,14 @@ async def on_ready():
                         message = config.get("message", f"\U0001F6A8 {username} is now live on TikTok! Watch here: {tiktok_url}")
                         guild = bot.get_guild(int(server_id)) if server_id else None
                         if guild:
-                            # Dynamically fetch the announce channel for the production server
-                            announce_channel_id = None
                             for server_config in SERVER_CONFIGS.get("production", []):
                                 if str(guild.id) == server_config.get("guild_id"):
                                     announce_channel_id = server_config.get("announce_channel_id")
-                                    break
-
-                            if announce_channel_id:
-                                announce_channel = guild.get_channel(int(announce_channel_id))
-                                if announce_channel:
-                                    await announce_channel.send(message)
-                                    message_sent = True
+                                    if announce_channel_id:
+                                        announce_channel = guild.get_channel(int(announce_channel_id))
+                                        if announce_channel:
+                                            await announce_channel.send(message)
+                                            message_sent = True
 
                 if not message_sent:
                     print(f"No announcement sent for {username}. Missing configuration.")
@@ -254,8 +167,6 @@ async def on_ready():
             await send_debug_logs_to_channel(error_message)
 
     print("Initial live status check complete.")
-
-
 
 if __name__ == "__main__":
     bot.run(TOKEN)
