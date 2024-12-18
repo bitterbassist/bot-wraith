@@ -67,11 +67,12 @@ SERVER_CONFIGS = {
     },
 }
 
+# Updated intents configuration with minimal needed permissions
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
-intents.message_content = True
-
+intents.message_content = True  # Allows reading message content
+intents.messages = True  # Enables message handling
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Setup logger with custom formatting
@@ -96,16 +97,21 @@ async def send_debug_logs_to_channel(log_message):
     """Sends debug logs to a specified channel in the test server."""
     test_server_id = os.getenv("TEST_SERVER_GUILD_ID")
     debug_channel_id = os.getenv("TEST_SERVER_MONITORING_STARTED_CHANNEL_ID")
-    test_guild = bot.get_guild(int(test_server_id))
+    test_guild = bot.get_guild(int(test_server_id)) if test_server_id else None
     if test_guild:
-        debug_channel = test_guild.get_channel(int(debug_channel_id))
+        debug_channel = test_guild.get_channel(int(debug_channel_id)) if debug_channel_id else None
         if debug_channel:
             await debug_channel.send(f"`DEBUG LOG:` {log_message}")
 
-# Updated on_ready function
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
+
+    # Print intents to ensure they are correctly set
+    print("Intents Configuration:")
+    print(f"Guilds Intent: {bot.intents.guilds}")
+    print(f"Members Intent: {bot.intents.members}")
+    print(f"Message Content Intent: {bot.intents.message_content}")
 
     # Set the custom status for the bot
     await bot.change_presence(
@@ -113,63 +119,43 @@ async def on_ready():
     )
 
     print("Starting initial live status check...")
-    results = []
-
     for username in TIKTOK_USERS:
         if not username.strip():
             continue
         client = TikTokLiveClient(unique_id=username)
         try:
-            live_status = await client.is_live()  # Await the coroutine properly
+            print(f"Checking live status for {username}...")
+            live_status = await asyncio.wait_for(client.is_live(), timeout=5)
+            print(f"Live status for {username}: {live_status}")
             if live_status:
                 tiktok_url = f"https://www.tiktok.com/@{username}/live"
                 message_sent = False
 
-                # Check SPECIAL_USERS for a configured message
-                if username in SPECIAL_USERS:
-                    for config in SPECIAL_USERS[username]:
-                        server_id = config.get("server")
-                        custom_message = config.get("message", "")
-                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
-                        guild = bot.get_guild(int(server_id))
-                        if guild:
-                            for server_config in SERVER_CONFIGS.get("production", []):
-                                if str(guild.id) == server_config.get("guild_id"):
-                                    announce_channel_id = server_config.get("announce_channel_id")
-                                    if announce_channel_id:
-                                        announce_channel = guild.get_channel(int(announce_channel_id))
-                                        if announce_channel:
-                                            await announce_channel.send(message)
-                                            message_sent = True
-
-                # Check VIP_USERS for a configured message
-                if username in VIP_USERS:
-                    for config in VIP_USERS[username]:
-                        server_id = config.get("server", "")
-                        custom_message = config.get("message", "")
-                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
-                        guild = bot.get_guild(int(server_id)) if server_id else None
-                        if guild:
-                            for server_config in SERVER_CONFIGS.get("production", []):
-                                if str(guild.id) == server_config.get("guild_id"):
-                                    announce_channel_id = server_config.get("announce_channel_id")
-                                    if announce_channel_id:
-                                        announce_channel = guild.get_channel(int(announce_channel_id))
-                                        if announce_channel:
-                                            await announce_channel.send(message)
-                                            message_sent = True
-
+                # Send announcements to configured servers
+                for server_config in SERVER_CONFIGS.get("production", []):
+                    announce_channel_id = server_config.get("announce_channel_id")
+                    guild_id = server_config.get("guild_id")
+                    if guild_id and announce_channel_id:
+                        guild = bot.get_guild(int(guild_id))
+                        announce_channel = guild.get_channel(int(announce_channel_id)) if guild else None
+                        if announce_channel:
+                            message = f"{username} is now live! 🎥 \n🔗 Watch here: {tiktok_url}"
+                            await announce_channel.send(message)
+                            print(f"Announcement sent for {username} to {announce_channel}.")
+                            message_sent = True
+                        else:
+                            print(f"Could not find guild/channel for {guild_id}/{announce_channel_id}.")
+                
                 if not message_sent:
-                    print(f"No announcement sent for {username}. Missing configuration.")
-                else:
-                    print(f"Announcement sent for {username}.")
+                    print(f"No announcement sent for {username}. Configuration missing.")
+        except asyncio.TimeoutError:
+            print(f"Timeout checking live status for {username}.")
         except Exception as e:
             error_message = f"Error checking live status for {username}: {e}"
             print(error_message)
             await send_debug_logs_to_channel(error_message)
 
     print("Initial live status check complete.")
-
 
 if __name__ == "__main__":
     bot.run(TOKEN)
