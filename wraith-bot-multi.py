@@ -66,6 +66,13 @@ SERVER_CONFIGS = {
     },
 }
 
+# Map TikTok usernames to Discord usernames
+USERNAME_MAP = {
+    pair.split(":")[0]: pair.split(":")[1]
+    for pair in os.getenv("USERNAME_MAP", "").split(",")
+    if ":" in pair
+}
+
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
@@ -221,14 +228,17 @@ async def on_ready():
                             )
                             if role_name:
                                 role = discord.utils.get(guild.roles, name=role_name)
-                                if role:
-                                    member = guild.get_member_named(username)
-                                    if member:
+                                mapped_username = USERNAME_MAP.get(username, username)
+                                member = discord.utils.find(lambda m: m.name == mapped_username, guild.members)
+                                if role and member:
+                                    try:
                                         await member.add_roles(role)
                                         role_applied = True
-                                        print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}")
+                                        print(f"[DEBUG] Role '{role.name}' applied to {mapped_username} in guild {guild.name}.")
+                                    except discord.Forbidden:
+                                        print(f"[ERROR] Missing permissions to assign role '{role.name}' to {mapped_username}.")
                                 else:
-                                    print(f"[DEBUG] Role '{role_name}' not found in guild {guild.name}")
+                                    print(f"[DEBUG] Role or member not found for {username} in guild {guild.name}.")
                         else:
                             print(f"[DEBUG] Guild not found for server_id: {server_id}")
 
@@ -262,14 +272,17 @@ async def on_ready():
                             )
                             if role_name:
                                 role = discord.utils.get(guild.roles, name=role_name)
-                                if role:
-                                    member = guild.get_member_named(username)
-                                    if member:
+                                mapped_username = USERNAME_MAP.get(username, username)
+                                member = discord.utils.find(lambda m: m.name == mapped_username, guild.members)
+                                if role and member:
+                                    try:
                                         await member.add_roles(role)
                                         role_applied = True
-                                        print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}")
+                                        print(f"[DEBUG] Role '{role.name}' applied to {mapped_username} in guild {guild.name}.")
+                                    except discord.Forbidden:
+                                        print(f"[ERROR] Missing permissions to assign role '{role.name}' to {mapped_username}.")
                                 else:
-                                    print(f"[DEBUG] Role '{role_name}' not found in guild {guild.name}")
+                                    print(f"[DEBUG] Role or member not found for {username} in guild {guild.name}.")
                         else:
                             print(f"[DEBUG] Guild not found for server_id: {server_id}")
 
