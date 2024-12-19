@@ -92,6 +92,24 @@ def setup_logger(logger):
 # Cache for live status to reduce frequent checks
 live_status_cache = {}
 
+# Helper: Find announcement channel for a guild
+def get_announce_channel(guild_id):
+    for server_config in SERVER_CONFIGS.get("production", []):
+        if str(guild_id) == server_config.get("guild_id"):
+            announce_channel_id = server_config.get("announce_channel_id")
+            return int(announce_channel_id) if announce_channel_id else None
+    return None
+
+# Helper: Find role for a guild
+def get_role(guild, role_name):
+    return discord.utils.get(guild.roles, name=role_name)
+
+# Helper: Log and send debug messages
+async def log_debug(message, log_to_discord=True):
+    print(message)
+    if log_to_discord:
+        await send_debug_logs_to_channel(message)
+
 async def send_debug_logs_to_channel(log_message):
     """Sends debug logs to a specified channel in the test server."""
     test_server_id = os.getenv("TEST_SERVER_GUILD_ID")
@@ -102,7 +120,31 @@ async def send_debug_logs_to_channel(log_message):
         if debug_channel:
             await debug_channel.send(f"`DEBUG LOG:` {log_message}")
 
-# Updated on_ready function
+@bot.command()
+async def check_live_all(ctx):
+    """Check the live status of all monitored TikTok users."""
+    results = []
+    for username in TIKTOK_USERS:
+        if not username.strip():
+            continue
+        client = TikTokLiveClient(unique_id=username)
+        try:
+            live_status = await client.is_live()
+            status_message = f"{username} is {'live' if live_status else 'not live'}"
+        except Exception as e:
+            status_message = f"{username}: Error checking live status - {e}"
+        results.append(status_message)
+    
+    if results:
+        await ctx.send("\n".join(results))
+    else:
+        await ctx.send("No TikTok users are currently being monitored.")
+
+@bot.command()
+async def bot_status(ctx):
+    """Display the bot's current status."""
+    await ctx.send("Wraith Bot is online and monitoring TikTok users! 🚀")
+
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
@@ -113,60 +155,103 @@ async def on_ready():
     )
 
     print("Starting initial live status check...")
-    results = []
-
     for username in TIKTOK_USERS:
         if not username.strip():
             continue
         client = TikTokLiveClient(unique_id=username)
+
         try:
-            live_status = await client.is_live()  # Await the coroutine properly
+            # Check live status
+            live_status = await client.is_live()
+            print(f"[DEBUG] {username} live status: {live_status}")
+
             if live_status:
                 tiktok_url = f"https://www.tiktok.com/@{username}/live"
                 message_sent = False
+                role_applied = False
 
-                # Check SPECIAL_USERS for a configured message
+                # Process SPECIAL_USERS
                 if username in SPECIAL_USERS:
                     for config in SPECIAL_USERS[username]:
                         server_id = config.get("server")
                         custom_message = config.get("message", "")
                         message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
                         guild = bot.get_guild(int(server_id))
-                        if guild:
-                            for server_config in SERVER_CONFIGS.get("production", []):
-                                if str(guild.id) == server_config.get("guild_id"):
-                                    announce_channel_id = server_config.get("announce_channel_id")
-                                    if announce_channel_id:
-                                        announce_channel = guild.get_channel(int(announce_channel_id))
-                                        if announce_channel:
-                                            await announce_channel.send(message)
-                                            message_sent = True
 
-                # Check VIP_USERS for a configured message
+                        if guild:
+                            print(f"[DEBUG] Found guild: {guild.name} ({guild.id}) for SPECIAL_USERS")
+
+                            # Get announce channel
+                            announce_channel_id = get_announce_channel(guild.id)
+                            if announce_channel_id:
+                                announce_channel = guild.get_channel(announce_channel_id)
+                                if announce_channel:
+                                    await announce_channel.send(message)
+                                    message_sent = True
+                                    print(f"[DEBUG] Announcement sent for {username} in channel {announce_channel.name}")
+                            else:
+                                await log_debug(f"[DEBUG] No announce channel found for guild {guild.id}")
+
+                            # Apply role if configured
+                            role_name = config.get("role_name", "")
+                            if role_name:
+                                role = get_role(guild, role_name)
+                                if role:
+                                    member = guild.get_member_named(username)
+                                    if member:
+                                        await member.add_roles(role)
+                                        role_applied = True
+                                        print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}")
+                                    else:
+                                        await log_debug(f"[DEBUG] Member '{username}' not found in guild {guild.name}")
+                                else:
+                                    await log_debug(f"[DEBUG] Role '{role_name}' not found in guild {guild.name}")
+
+                # Process VIP_USERS
                 if username in VIP_USERS:
                     for config in VIP_USERS[username]:
                         server_id = config.get("server", "")
                         custom_message = config.get("message", "")
                         message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
                         guild = bot.get_guild(int(server_id)) if server_id else None
+
                         if guild:
-                            for server_config in SERVER_CONFIGS.get("production", []):
-                                if str(guild.id) == server_config.get("guild_id"):
-                                    announce_channel_id = server_config.get("announce_channel_id")
-                                    if announce_channel_id:
-                                        announce_channel = guild.get_channel(int(announce_channel_id))
-                                        if announce_channel:
-                                            await announce_channel.send(message)
-                                            message_sent = True
+                            print(f"[DEBUG] Found guild: {guild.name} ({guild.id}) for VIP_USERS")
+
+                            # Get announce channel
+                            announce_channel_id = get_announce_channel(guild.id)
+                            if announce_channel_id:
+                                announce_channel = guild.get_channel(announce_channel_id)
+                                if announce_channel:
+                                    await announce_channel.send(message)
+                                    message_sent = True
+                                    print(f"[DEBUG] Announcement sent for {username} in channel {announce_channel.name}")
+                            else:
+                                await log_debug(f"[DEBUG] No announce channel found for guild {guild.id}")
+
+                            # Apply role if configured
+                            role_name = config.get("role_name", "")
+                            if role_name:
+                                role = get_role(guild, role_name)
+                                if role:
+                                    member = guild.get_member_named(username)
+                                    if member:
+                                        await member.add_roles(role)
+                                        role_applied = True
+                                        print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}")
+                                    else:
+                                        await log_debug(f"[DEBUG] Member '{username}' not found in guild {guild.name}")
+                                else:
+                                    await log_debug(f"[DEBUG] Role '{role_name}' not found in guild {guild.name}")
 
                 if not message_sent:
-                    print(f"No announcement sent for {username}. Missing configuration.")
-                else:
-                    print(f"Announcement sent for {username}.")
+                    await log_debug(f"[DEBUG] No announcement sent for {username}. Missing configuration or errors.")
+                if not role_applied:
+                    await log_debug(f"[DEBUG] No role applied for {username}. Missing configuration or errors.")
+
         except Exception as e:
-            error_message = f"Error checking live status for {username}: {e}"
-            print(error_message)
-            await send_debug_logs_to_channel(error_message)
+            error_message = f"[ERROR] Error checking live status for {username}: {e}"
+            await log_debug(error_message)
 
     print("Initial live status check complete.")
 
