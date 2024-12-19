@@ -194,20 +194,4 @@ async def on_ready():
         except Exception as e:
             await log_debug(bot, f"[ERROR] Exception for {username}: {e}")
 
-@bot.command()
-async def check_live_all(ctx):
-    results = []
-    for username in TIKTOK_USERS:
-        client = TikTokLiveClient(unique_id=username)
-        try:
-            live_status = await client.is_live()
-            results.append(f"{username} is {'live' if live_status else 'not live'}")
-        except Exception as e:
-            results.append(f"{username}: Error - {e}")
-    await ctx.send("\n".join(results) if results else "No monitored users.")
-
-@bot.command()
-async def bot_status(ctx):
-    await ctx.send("Bot is online and monitoring TikTok users! 🚀")
-
 bot.run(TOKEN)
