@@ -148,4 +148,60 @@ async def test_post_all(ctx):
     else:
         await ctx.send("Test message successfully sent to all announcement channels!")
 
-bot.run(TOKEN)
+                            print(f"[DEBUG] Guild not found for server_id: {server_id}")
+
+                # Process VIP_USERS
+                if username in VIP_USERS:
+                    for config in VIP_USERS[username]:
+                        server_id = config.get("server", "")
+                        custom_message = config.get("message", "")
+                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
+                        guild = bot.get_guild(int(server_id)) if server_id else None
+
+                        if guild:
+                            print(f"[DEBUG] Found guild: {guild.name} ({guild.id}) for VIP_USERS")
+                            announce_channel_id = next(
+                                (c.get("announce_channel_id") for c in SERVER_CONFIGS["production"] if c["guild_id"] == str(guild.id)),
+                                None
+                            )
+                            if announce_channel_id:
+                                announce_channel = guild.get_channel(int(announce_channel_id))
+                                if announce_channel:
+                                    await announce_channel.send(message)
+                                    message_sent = True
+                                    print(f"[DEBUG] Announcement sent for {username} in channel {announce_channel.name}")
+                            else:
+                                print(f"[DEBUG] No announce channel found for guild {guild.id}")
+
+                            # Apply role if configured
+                            role_name = next(
+                                (c.get("role_name") for c in SERVER_CONFIGS["production"] if c["guild_id"] == str(guild.id)),
+                                None
+                            )
+                            if role_name:
+                                role = discord.utils.get(guild.roles, name=role_name)
+                                if role:
+                                    member = guild.get_member_named(username)
+                                    if member:
+                                        await member.add_roles(role)
+                                        role_applied = True
+                                        print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}")
+                                else:
+                                    print(f"[DEBUG] Role '{role_name}' not found in guild {guild.name}")
+                        else:
+                            print(f"[DEBUG] Guild not found for server_id: {server_id}")
+
+                if not message_sent:
+                    print(f"[DEBUG] No announcement sent for {username}. Missing configuration or errors.")
+                if not role_applied:
+                    print(f"[DEBUG] No role applied for {username}. Missing configuration or errors.")
+
+        except Exception as e:
+            error_message = f"[ERROR] Error checking live status for {username}: {e}"
+            print(error_message)
+            await send_debug_logs_to_channel(error_message)
+
+    print("Initial live status check complete.")
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
