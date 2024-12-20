@@ -151,10 +151,15 @@ async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
     # Initialize TikTok clients
-    for username in TIKTOK_USERS:
-        if username.strip():
-            client = create_tiktok_client(username)
-            client.run()
+    async def start_tiktok_clients():
+        for username in TIKTOK_USERS:
+            if username.strip():
+                client = create_tiktok_client(username)
+                bot.loop.create_task(client.connect())
+                print(f"[INFO] Monitoring TikTok user: {username}")
+
+    # Run TikTok clients asynchronously
+    bot.loop.create_task(start_tiktok_clients())
 
 if __name__ == "__main__":
     bot.run(TOKEN)
