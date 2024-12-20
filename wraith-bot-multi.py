@@ -148,17 +148,24 @@ def create_tiktok_client(username):
     return client
 
 async def start_tiktok_clients():
-    for username in TIKTOK_USERS:
-        if username.strip():
-            client = create_tiktok_client(username)
+    async def handle_client(username):
+        """Handle connection and retries for a single TikTok user."""
+        client = create_tiktok_client(username)
+        while True:
             try:
+                print(f"[INFO] Attempting to connect to {username}'s TikTok live...")
                 await client.connect()
             except UserOfflineError:
-                print(f"[DEBUG] {username} is currently offline. Retrying in 60 seconds...")
+                print(f"[DEBUG] {username} is offline. Retrying in 60 seconds...")
                 await asyncio.sleep(60)
-                bot.loop.create_task(client.connect())
             except Exception as e:
                 print(f"[ERROR] An unexpected error occurred for {username}: {e}")
+                break  # Stop retrying on unexpected errors
+
+    # Start a coroutine for each TikTok username
+    for username in TIKTOK_USERS:
+        if username.strip():
+            bot.loop.create_task(handle_client(username))
 
 @bot.event
 async def on_ready():
