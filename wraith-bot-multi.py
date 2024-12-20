@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 from TikTokLive import TikTokLiveClient
 from TikTokLive.events import ConnectEvent, DisconnectEvent
+from TikTokLive.client.errors import UserOfflineError
 from dotenv import load_dotenv
 import os
 import logging
@@ -146,19 +147,24 @@ def create_tiktok_client(username):
 
     return client
 
+async def start_tiktok_clients():
+    for username in TIKTOK_USERS:
+        if username.strip():
+            client = create_tiktok_client(username)
+            try:
+                await client.connect()
+            except UserOfflineError:
+                print(f"[DEBUG] {username} is currently offline. Retrying in 60 seconds...")
+                await asyncio.sleep(60)
+                bot.loop.create_task(client.connect())
+            except Exception as e:
+                print(f"[ERROR] An unexpected error occurred for {username}: {e}")
+
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-    # Initialize TikTok clients
-    async def start_tiktok_clients():
-        for username in TIKTOK_USERS:
-            if username.strip():
-                client = create_tiktok_client(username)
-                bot.loop.create_task(client.connect())
-                print(f"[INFO] Monitoring TikTok user: {username}")
-
-    # Run TikTok clients asynchronously
+    # Start TikTok clients asynchronously
     bot.loop.create_task(start_tiktok_clients())
 
 if __name__ == "__main__":
