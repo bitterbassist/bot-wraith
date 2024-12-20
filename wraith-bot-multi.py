@@ -66,6 +66,13 @@ SERVER_CONFIGS = {
     },
 }
 
+# Map TikTok usernames to Discord user IDs
+USERNAME_TO_DISCORD_ID = {
+    pair.split(":")[0]: int(pair.split(":")[1])
+    for pair in os.getenv("USERNAME_TO_DISCORD_ID", "").split(",")
+    if ":" in pair
+}
+
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
@@ -239,75 +246,35 @@ async def on_ready():
                             if role_id:
                                 role = get_role_by_id(guild, role_id)
                                 if role:
-                                    member = discord.utils.find(lambda m: username.lower() in m.name.lower(), guild.members)
-                                    if member:
-                                        try:
-                                            await member.add_roles(role)
-                                            role_applied = True
-                                            print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}.")
-                                        except discord.Forbidden:
-                                            await log_debug(f"[ERROR] Missing permissions to assign role '{role.name}' to {username}.")
+                                    discord_id = USERNAME_TO_DISCORD_ID.get(username)
+                                    if discord_id:
+                                        member = guild.get_member(discord_id)
+                                        if member:
+                                            try:
+                                                await member.add_roles(role)
+                                                role_applied = True
+                                                print(f"[DEBUG] Role '{role.name}' applied to Discord ID {discord_id} in guild {guild.name}.")
+                                            except discord.Forbidden:
+                                                print(f"[ERROR] Missing permissions to assign role '{role.name}' to Discord ID {discord_id}.")
+                                        else:
+                                            print(f"[DEBUG] Member with Discord ID {discord_id} not found in guild {guild.name}.")
                                     else:
-                                        await log_debug(f"[DEBUG] Member '{username}' not found in guild {guild.name}.")
+                                        print(f"[DEBUG] No Discord ID mapped for TikTok username '{username}'.")
                                 else:
-                                    await log_debug(f"[DEBUG] Role ID '{role_id}' not found in guild {guild.name}.")
+                                    print(f"[DEBUG] Role ID '{role_id}' not found in guild {guild.name}.")
                             else:
-                                await log_debug(f"[DEBUG] No role_id configured for guild {guild.id}.")
+                                print(f"[DEBUG] No role ID configured for guild {guild.id}.")
 
-                # Process VIP_USERS
-                if username in VIP_USERS:
-                    for config in VIP_USERS[username]:
-                        server_id = config.get("server", "")
-                        custom_message = config.get("message", "")
-                        message = f"{custom_message} \n\U0001F517 Watch here: {tiktok_url}"
-                        guild = bot.get_guild(int(server_id)) if server_id else None
-
-                        if guild:
-                            print(f"[DEBUG] Found guild: {guild.name} ({guild.id}) for VIP_USERS")
-
-                            # Get announce channel
-                            announce_channel_id = get_announce_channel(guild.id)
-                            if announce_channel_id:
-                                announce_channel = guild.get_channel(announce_channel_id)
-                                if announce_channel:
-                                    await announce_channel.send(message)
-                                    message_sent = True
-                                    print(f"[DEBUG] Announcement sent for {username} in channel {announce_channel.name}")
-                            else:
-                                await log_debug(f"[DEBUG] No announce channel found for guild {guild.id}")
-
-                            # Apply role if configured
-                            role_id = next(
-                                (c.get("role_id") for c in SERVER_CONFIGS["production"] if str(guild.id) == c["guild_id"]),
-                                None
-                            )
-                            if role_id:
-                                role = get_role_by_id(guild, role_id)
-                                if role:
-                                    member = discord.utils.find(lambda m: username.lower() in m.name.lower(), guild.members)
-                                    if member:
-                                        try:
-                                            await member.add_roles(role)
-                                            role_applied = True
-                                            print(f"[DEBUG] Role '{role.name}' applied to {username} in guild {guild.name}.")
-                                        except discord.Forbidden:
-                                            await log_debug(f"[ERROR] Missing permissions to assign role '{role.name}' to {username}.")
-                                    else:
-                                        await log_debug(f"[DEBUG] Member '{username}' not found in guild {guild.name}.")
-                                else:
-                                    await log_debug(f"[DEBUG] Role ID '{role_id}' not found in guild {guild.name}.")
-                            else:
-                                await log_debug(f"[DEBUG] No role_id configured for guild {guild.id}.")
-
+                # Handle no announcements or role applications
                 if not message_sent:
-                    await log_debug(f"[DEBUG] No announcement sent for {username}. Missing configuration or errors.")
+                    print(f"[DEBUG] No announcement sent for {username}. Missing configuration or errors.")
                 if not role_applied:
-                    await log_debug(f"[DEBUG] No role applied for {username}. Missing configuration or errors.")
+                    print(f"[DEBUG] No role applied for {username}. Missing configuration or errors.")
 
         except Exception as e:
             error_message = f"[ERROR] Error checking live status for {username}: {e}"
             print(error_message)
-            await send_debug_logs_to_channel(error_message)
+            await log_debug(error_message)
 
     print("Initial live status check complete.")
 
