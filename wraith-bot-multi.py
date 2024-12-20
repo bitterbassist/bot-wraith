@@ -24,8 +24,16 @@ USERNAME_TO_DISCORD_ID = {
 }
 
 # Discord configurations
-DISCORD_GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
-DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID"))
+DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID")
+if not DISCORD_GUILD_ID:
+    raise ValueError("DISCORD_GUILD_ID is not set in the environment variables.")
+DISCORD_GUILD_ID = int(DISCORD_GUILD_ID)
+
+DISCORD_CHANNEL_ID = os.getenv("DISCORD_CHANNEL_ID")
+if not DISCORD_CHANNEL_ID:
+    raise ValueError("DISCORD_CHANNEL_ID is not set in the environment variables.")
+DISCORD_CHANNEL_ID = int(DISCORD_CHANNEL_ID)
+
 ROLE_NAME = os.getenv("ROLE_NAME", "Live Now")
 
 intents = discord.Intents.default()
