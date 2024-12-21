@@ -170,6 +170,46 @@ async def start_tiktok_clients():
     for username in TIKTOK_USERS:
         if username.strip():
             bot.loop.create_task(handle_client(username))
+@bot.command(name="announce_live")
+async def announce_live(ctx, username: str):
+    """
+    Manually announce that a TikTok user is live.
+    
+    Usage:
+    !announce_live <TikTokUsername>
+    """
+    try:
+        username = username.strip()
+        if username not in TIKTOK_USERS:
+            await ctx.send(f"Error: {username} is not in the monitored TikTok users list.")
+            return
+
+        # Determine the guild and announcement channel
+        guild_id = next((server for server, details in SPECIAL_USERS.get(username, []) if "server" in details), None)
+        if not guild_id or guild_id not in PROD_SERVERS:
+            await ctx.send(f"Error: No valid server configuration found for {username}.")
+            return
+
+        guild_config = PROD_SERVERS[guild_id]
+        guild = bot.get_guild(int(guild_id))
+        if not guild:
+            await ctx.send(f"Error: Could not find guild with ID {guild_id}.")
+            return
+
+        channel_id = guild_config["announce_channel"]
+        channel = guild.get_channel(int(channel_id))
+        if not channel:
+            await ctx.send(f"Error: Announcement channel not found for {username}.")
+            return
+
+        # Get custom message if available
+        message = VIP_USERS.get(username, {}).get("message", f"{username} is now live on TikTok! Watch here: https://www.tiktok.com/@{username}/live")
+        await channel.send(message)
+        await ctx.send(f"Announcement sent: {message}")
+        logger.info(f"Manual announcement sent for {username} by {ctx.author}.")
+    except Exception as e:
+        logger.exception(f"Error while manually announcing {username}: {e}")
+        await ctx.send(f"An error occurred while processing the announcement for {username}.")
 
 @bot.event
 async def on_ready():
