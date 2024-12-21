@@ -119,7 +119,7 @@ def create_tiktok_client(username):
         print(f"[INFO] {username} started a live stream.")
 
         # Assign role and send announcement in Discord
-        guild = bot.get_guild(int(os.getenv("DISCORD_GUILD_ID")))
+        guild = bot.get_guild(int(os.getenv("PRODUCTION_SERVER_IDS")))
         role_name = os.getenv("ROLE_NAME", "Live Now")
         role = discord.utils.get(guild.roles, name=role_name)
         discord_id = USERNAME_TO_DISCORD_ID.get(username)
@@ -127,7 +127,7 @@ def create_tiktok_client(username):
             member = guild.get_member(discord_id)
             if member and role:
                 await member.add_roles(role)
-                channel = bot.get_channel(int(os.getenv("DISCORD_CHANNEL_ID")))
+                channel = bot.get_channel(int(os.getenv("ANNOUNCE_CHANNEL_ID")))
                 await channel.send(f"{member.mention} is now live on TikTok! Watch here: https://www.tiktok.com/@{username}/live")
 
     @client.on(DisconnectEvent)
@@ -135,7 +135,7 @@ def create_tiktok_client(username):
         print(f"[INFO] {username} ended the live stream.")
 
         # Remove role in Discord
-        guild = bot.get_guild(int(os.getenv("DISCORD_GUILD_ID")))
+        guild = bot.get_guild(int(os.getenv("PRODUCTION_SERVER_IDS")))
         role_name = os.getenv("ROLE_NAME", "Live Now")
         role = discord.utils.get(guild.roles, name=role_name)
         discord_id = USERNAME_TO_DISCORD_ID.get(username)
@@ -143,7 +143,7 @@ def create_tiktok_client(username):
             member = guild.get_member(discord_id)
             if member and role:
                 await member.remove_roles(role)
-                channel = bot.get_channel(int(os.getenv("DISCORD_CHANNEL_ID")))
+                channel = bot.get_channel(int(os.getenv("ANNOUNCE_CHANNEL_ID")))
                 await channel.send(f"{member.mention} has ended their TikTok live stream.")
 
     return client
