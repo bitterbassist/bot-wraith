@@ -7,6 +7,7 @@ from TikTokLive.client.errors import UserOfflineError
 from dotenv import load_dotenv
 import os
 import logging
+import websockets.exceptions
 
 # Load environment variables
 load_dotenv()
@@ -149,21 +150,21 @@ def create_tiktok_client(username):
 
 async def start_tiktok_clients():
     async def handle_client(username):
-       """Handle connection and retries for a single TikTok user."""
-    client = create_tiktok_client(username)
-    while True:
-        try:
-            print(f"[INFO] Attempting to connect to {username}'s TikTok live...")
-            await client.connect()
-        except UserOfflineError:
-            print(f"[DEBUG] {username} is offline. Retrying in 60 seconds...")
-            await asyncio.sleep(60)  # Retry after delay
-        except websockets.exceptions.ConnectionClosedError as e:
-            print(f"[ERROR] WebSocket connection closed for {username}: {e}. Retrying in 30 seconds...")
-            await asyncio.sleep(30)  # Retry WebSocket connection
-        except Exception as e:
-            print(f"[ERROR] An unexpected error occurred for {username}: {e}")
-            break  # Stop retrying on unexpected errors
+        """Handle connection and retries for a single TikTok user."""
+        client = create_tiktok_client(username)
+        while True:
+            try:
+                print(f"[INFO] Attempting to connect to {username}'s TikTok live...")
+                await client.connect()
+            except UserOfflineError:
+                print(f"[DEBUG] {username} is offline. Retrying in 60 seconds...")
+                await asyncio.sleep(60)  # Retry after delay
+            except websockets.exceptions.ConnectionClosedError as e:
+                print(f"[ERROR] WebSocket connection closed for {username}: {e}. Retrying in 30 seconds...")
+                await asyncio.sleep(30)  # Retry WebSocket connection
+            except Exception as e:
+                print(f"[ERROR] An unexpected error occurred for {username}: {e}")
+                break  # Stop retrying on unexpected errors
 
     # Start a coroutine for each TikTok username
     for username in TIKTOK_USERS:
